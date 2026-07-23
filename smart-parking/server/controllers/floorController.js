@@ -24,8 +24,12 @@ exports.getAllFloors = async (req, res) => {
 };
 
 // GET /api/floors/:id — detailed layout with slots
+// Public/unauthenticated route: deliberately does NOT populate
+// slots.lastUpdatedBy (staff name) since that would expose employee
+// names/assignment info to anonymous drivers for no product need --
+// the client never displays it.
 exports.getFloorById = async (req, res) => {
-  const floor = await Floor.findById(req.params.id).populate('slots.lastUpdatedBy', 'name');
+  const floor = await Floor.findById(req.params.id);
 
   if (!floor || !floor.isActive) {
     return res.status(404).json({ message: 'Floor not found.' });

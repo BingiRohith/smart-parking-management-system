@@ -16,7 +16,7 @@
 | 4 | 🟠 High | Security | `server/controllers/authController.js:10-18` | `sameSite: 'strict'` cookie will silently break auth on cross-domain production deploys | ✅ FIXED |
 | 5 | 🟠 High | Security | `server/routes/auth.js`, whole API | No rate limiting anywhere — login is brute-forceable | ✅ FIXED |
 | 6 | 🟡 Medium | Validation/Runtime | `server/controllers/authController.js:39` | Login username isn't lowercased before query, but stored usernames are forced lowercase | ✅ FIXED |
-| 7 | 🟡 Medium | Security | `server/controllers/floorController.js:26` | Public unauthenticated endpoint leaks staff names via `populate` | ⏳ PENDING |
+| 7 | 🟡 Medium | Security | `server/controllers/floorController.js:26` | Public unauthenticated endpoint leaks staff names via `populate` | ✅ FIXED |
 | 8 | 🟡 Medium | Database | `server/controllers/floorController.js:38-91` | Read-modify-write on `Floor.save()` risks lost updates under concurrent slot edits | ✅ FIXED |
 | 9 | 🟡 Medium | Validation | `server/controllers/floorController.js:96-127` | No bounds/type check on `rows`/`slotsPerRow` | ✅ FIXED |
 | 10 | 🟡 Medium | Security | `server/controllers/authController.js:28` | JWT unnecessarily duplicated into the response body | ✅ FIXED |
@@ -188,7 +188,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `GET /api/floors/:id` has no `protect` middleware (by design — it's meant to serve anonymous drivers), yet it populates and returns the full `name` of whichever staff member last toggled *every single slot* on that floor. The frontend ([FloorDetailPage.jsx](client/src/pages/driver/FloorDetailPage.jsx)) never displays this field, but the raw JSON is fully accessible to anyone who calls the endpoint directly (curl, browser devtools network tab, etc.).
 - **Impact:** Minor PII leak — reveals employee names and (indirectly, via which floor/slot they're associated with) shift/assignment patterns, to any anonymous internet user, with no legitimate product need for it on this endpoint.
 - **Best fix:** Drop the `.populate('slots.lastUpdatedBy', ...)` on the public route entirely (it's unused by the client), or gate the populated field so it's only included for authenticated staff/admin requests.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Removed `.populate('slots.lastUpdatedBy', 'name')` from `getFloorById` (confirmed unused by the client beforehand). Verified against a live server: after a real slot update (so `lastUpdatedBy` is genuinely set), the public `GET /api/floors/:id` response now returns it as a raw ObjectId string rather than a populated `{_id, name}` object — no staff name is exposed.
 
 ### S7 — Password policy is minimal
 - **Severity:** 🟡 Medium
