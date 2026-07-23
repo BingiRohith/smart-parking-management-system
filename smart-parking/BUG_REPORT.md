@@ -190,7 +190,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** No complexity requirement (no character-class mix, no common-password check), and 6 characters is short by modern standards.
 - **Impact:** Weak passwords like `"123456"` pass validation; combined with S5's lack of rate limiting, accounts are realistically brute-forceable.
 - **Best fix:** Raise `minlength` (8+) and/or validate complexity, and prioritize fixing S5 first since rate limiting matters more than password policy alone.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Raised `minlength` from 6 to 8 (with a clearer validation message); did not add character-complexity rules, judging the length bump combined with the now-fixed rate limiting (S5) to be adequate hardening without adding UX friction beyond what this bug-fix pass calls for. Updated the matching client-side placeholder hint in `AdminStaff.jsx` from "Min. 6 characters" to "Min. 8 characters". Verified against a live database: the seeded demo passwords (`admin123`, `security123`, both already ≥8 chars) still work unchanged; creating staff with a 6-character password now correctly returns `400`, an 8-character one succeeds.
 
 ### S8 — JWT duplicated into the JSON response body
 - **Severity:** 🟡 Medium

@@ -198,7 +198,7 @@ const AdminStaff = () => {
           </div>
           <div className="form-group">
             <label className="form-label">{editTarget ? 'New Password (leave blank to keep)' : 'Password *'}</label>
-            <input name="password" type="password" className="form-input" value={form.password} onChange={handleFormChange} placeholder={editTarget ? 'Leave blank to keep current' : 'Min. 6 characters'} />
+            <input name="password" type="password" className="form-input" value={form.password} onChange={handleFormChange} placeholder={editTarget ? 'Leave blank to keep current' : 'Min. 8 characters'} />
           </div>
         </div>
 
