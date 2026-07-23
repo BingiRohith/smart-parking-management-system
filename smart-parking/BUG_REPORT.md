@@ -60,7 +60,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `document.body.style.overflow` is set to `'hidden'` or `''` based solely on the *current* modal's `isOpen`, with no reference counting. If two `Modal` instances were ever open at once, closing the inner one clears `overflow` even though the outer modal is still open.
 - **Impact:** Currently benign because the app never opens two modals simultaneously, but it's a latent bug that will resurface silently if that assumption changes (e.g., a confirm-dialog nested inside a form modal, which is a common pattern this app already uses elsewhere via `ConfirmDialog`).
 - **Best fix:** Track a module-level open-modal counter, or manage the scroll lock at the app root instead of per-modal-instance.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Added a module-level `openModalCount` shared across all `Modal` instances; the lock effect increments/sets `overflow:'hidden'` on mount-while-open and decrements on cleanup, only clearing `overflow` once the count reaches `0`. Verified the primary regression risk in a real browser: opened the "Add Floor" modal in the admin console (`overflow` correctly becomes `hidden`), then closed it (`overflow` correctly clears back to `''`) — identical behavior to before the change for the single-modal case, which is the only one that currently occurs in this app's UI. The nested-modal counting itself is simple, self-contained integer arithmetic verified by code inspection.
 
 ---
 

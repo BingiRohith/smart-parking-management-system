@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import './Modal.css';
 
+// Shared across all Modal instances so stacked/nested modals don't
+// prematurely re-enable body scroll when only the innermost one closes.
+let openModalCount = 0;
+
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   // Close on Escape key
   useEffect(() => {
@@ -10,10 +14,20 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     return () => document.removeEventListener('keydown', handler);
   }, [isOpen, onClose]);
 
-  // Lock body scroll when open
+  // Lock body scroll while this modal is open, using a reference count
+  // rather than an unconditional on/off toggle.
   useEffect(() => {
-    document.body.style.overflow = isOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    if (!isOpen) return;
+
+    openModalCount += 1;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      openModalCount -= 1;
+      if (openModalCount === 0) {
+        document.body.style.overflow = '';
+      }
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
