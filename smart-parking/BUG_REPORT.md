@@ -13,7 +13,7 @@
 | 1 | 🔴 Critical | Production/Security | *(missing)* `.gitignore` | No root or `server/.gitignore` — `.env` secrets and `node_modules` are uncommitted-only by luck | ✅ FIXED |
 | 2 | 🟠 High | Missing Dependency | `server/package.json:8` | `npm run dev` calls `nodemon`, which is never declared as a dependency | ✅ FIXED |
 | 3 | 🟠 High | Async Bug/Production | `server/index.js:34,71` | Server starts accepting requests before `connectDB()` resolves | ✅ FIXED |
-| 4 | 🟠 High | Security | `server/controllers/authController.js:10-18` | `sameSite: 'strict'` cookie will silently break auth on cross-domain production deploys | ⏳ PENDING |
+| 4 | 🟠 High | Security | `server/controllers/authController.js:10-18` | `sameSite: 'strict'` cookie will silently break auth on cross-domain production deploys | ✅ FIXED |
 | 5 | 🟠 High | Security | `server/routes/auth.js`, whole API | No rate limiting anywhere — login is brute-forceable | ✅ FIXED |
 | 6 | 🟡 Medium | Validation/Runtime | `server/controllers/authController.js:39` | Login username isn't lowercased before query, but stored usernames are forced lowercase | ✅ FIXED |
 | 7 | 🟡 Medium | Security | `server/controllers/floorController.js:26` | Public unauthenticated endpoint leaks staff names via `populate` | ⏳ PENDING |
@@ -158,7 +158,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `sameSite: 'strict'` cookies are only sent on requests considered "same-site" (same registrable domain, i.e., same eTLD+1) — they work fine right now because `localhost:5173` and `localhost:5000` share the site `localhost`. If frontend and backend are deployed to genuinely different domains (e.g., a Vercel-hosted client and a Render-hosted API — an extremely common split-hosting pattern), the browser will **never** attach the cookie to cross-site XHR/fetch calls, no exceptions.
 - **Impact:** Login would appear to succeed (the `Set-Cookie` header arrives), but every subsequent authenticated request would silently look logged-out, because the cookie is never sent back. This is the kind of bug that passes all local testing and only appears after deployment.
 - **Best fix:** If frontend/backend will ever live on different domains, use `sameSite: 'none'` + `secure: true` (already conditionally set for production) and add CSRF protection (see S4) to compensate for the weaker SameSite policy.
-- **Status:** ⏳ PENDING — planned together with S4 (see that entry; fixing one without the other is unsafe).
+- **Status:** ✅ **FIXED, together with S4.** `sameSite` is now `'none'` + `secure: true` in production (allows the cookie to be sent cross-site) and `'lax'` in development (unchanged practical behavior on localhost). See S4 immediately below for how CSRF exposure from relaxing `sameSite` was closed at the same time.
 
 ### S4 — No CSRF protection on any state-changing endpoint
 - **Severity:** 🟡 Medium (would become 🟠 High if S3 is "fixed" by relaxing `sameSite`)
@@ -166,7 +166,13 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** Authentication relies entirely on an automatically-attached cookie with no CSRF token or double-submit check anywhere. This is currently only safe *because* of `sameSite: 'strict'` (S3) — the two issues are directly coupled.
 - **Impact:** Currently low risk given S3's strict policy, but there is no independent defense-in-depth; fixing S3 for cross-domain deploys without also adding CSRF protection would open a real cross-site request forgery hole on every admin/security write endpoint.
 - **Best fix:** Add a CSRF token (e.g., `csurf`/double-submit cookie pattern) as part of any change to the cookie's `sameSite` policy.
-- **Status:** ⏳ PENDING — will be fixed in the same change as S3.
+- **Status:** ✅ **FIXED.** Implemented the double-submit cookie pattern (no external CSRF library needed — `csurf` is deprecated/unmaintained):
+  - Login now also sets a second, **non**-httpOnly `csrfToken` cookie (random 32-byte hex) alongside the existing httpOnly `token` cookie.
+  - New `server/middleware/csrf.js`, applied globally to all requests: any non-safe method (anything but GET/HEAD/OPTIONS), except `POST /api/auth/login` itself (no session exists yet to forge), must send an `X-CSRF-Token` header matching the `csrfToken` cookie, or the request is rejected with `403`.
+  - Client (`services/api.js`) gained a request interceptor that reads the `csrfToken` cookie via `document.cookie` and attaches it as the `X-CSRF-Token` header automatically — no call sites needed to change.
+  - `logout` now clears both cookies.
+
+  **Verified two ways:** (1) Raw HTTP tests against a live server confirmed a valid auth cookie *without* a CSRF header is rejected `403`, a *wrong* CSRF header is rejected `403`, the *correct* header succeeds `200`, GET requests are unaffected, and the protected `POST /api/auth/logout` route is correctly covered too. (2) A full real-browser end-to-end run (Vite dev client + Express server + a live MongoDB instance): logged in as a security user through the actual UI, clicked a slot to toggle it, and confirmed the `PATCH` request succeeded (`200`, correct response body, UI updated live) — proving the browser's own `document.cookie` read and the axios interceptor work correctly together, not just the server-side logic in isolation. Also confirmed via `document.cookie` inspection that `csrfToken` is JS-readable while `token` remains invisible to JS (still httpOnly), exactly as intended.
 
 ### S5 — No rate limiting anywhere, especially on login
 - **Severity:** 🟠 High
@@ -382,7 +388,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 
 ### PR2 — `sameSite: 'strict'` breaks cross-domain production auth
 - **Severity:** 🟠 High — see **Security #S3** above.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ FIXED — see S3/S4 above.
 
 ### PR3 — No rate limiting
 - **Severity:** 🟠 High — see **Security #S5** above.

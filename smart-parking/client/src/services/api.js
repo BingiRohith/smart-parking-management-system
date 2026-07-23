@@ -8,6 +8,22 @@ const api = axios.create({
   },
 });
 
+const getCookie = (name) => {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+};
+
+// Echo the (non-httpOnly) csrfToken cookie back as a header on every
+// request — the double-submit cookie pattern the backend expects on
+// state-changing requests (see server/middleware/csrf.js).
+api.interceptors.request.use((config) => {
+  const csrfToken = getCookie('csrfToken');
+  if (csrfToken) {
+    config.headers['X-CSRF-Token'] = csrfToken;
+  }
+  return config;
+});
+
 // Intercept responses to handle auth errors globally
 api.interceptors.response.use(
   (response) => response,
