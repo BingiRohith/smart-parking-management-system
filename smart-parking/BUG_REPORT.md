@@ -11,7 +11,7 @@
 | # | Severity | Category | File | Short description | Status |
 |---|---|---|---|---|---|
 | 1 | 🔴 Critical | Production/Security | *(missing)* `.gitignore` | No root or `server/.gitignore` — `.env` secrets and `node_modules` are uncommitted-only by luck | ✅ FIXED |
-| 2 | 🟠 High | Missing Dependency | `server/package.json:8` | `npm run dev` calls `nodemon`, which is never declared as a dependency | ⏳ PENDING |
+| 2 | 🟠 High | Missing Dependency | `server/package.json:8` | `npm run dev` calls `nodemon`, which is never declared as a dependency | ✅ FIXED |
 | 3 | 🟠 High | Async Bug/Production | `server/index.js:34,71` | Server starts accepting requests before `connectDB()` resolves | ⏳ PENDING |
 | 4 | 🟠 High | Security | `server/controllers/authController.js:10-18` | `sameSite: 'strict'` cookie will silently break auth on cross-domain production deploys | ⏳ PENDING |
 | 5 | 🟠 High | Security | `server/routes/auth.js`, whole API | No rate limiting anywhere — login is brute-forceable | ⏳ PENDING |
@@ -78,7 +78,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `nodemon` is not listed in `dependencies` or `devDependencies`, and isn't installed anywhere in the dependency tree.
 - **Impact:** Confirmed empirically — `npm run dev` fails immediately with `'nodemon' is not recognized as an internal or external command`. Anyone following the natural `npm run dev` convention (rather than the README's `node index.js`) cannot start the server at all.
 - **Best fix:** `npm install --save-dev nodemon` and commit the updated `package.json`/`package-lock.json`.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Ran `npm install --save-dev nodemon` in `server/`, adding it to a new `devDependencies` block. Verified `npm run dev` now boots the server correctly (confirmed via a live run showing nodemon's startup banner and the app listening on port 5000), instead of failing with `'nodemon' is not recognized`.
 
 ---
 
