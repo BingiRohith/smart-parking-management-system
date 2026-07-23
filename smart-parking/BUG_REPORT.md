@@ -28,7 +28,7 @@
 | 16 | 🟢 Low | Duplicate Code | `server/utils/seed.js:7-22` vs `server/controllers/floorController.js:104-117` | Slot-generation logic duplicated and drifted | ✅ FIXED |
 | 17 | 🟢 Low | Duplicate Code | `client/src/pages/admin/AdminFloors.jsx` vs `AdminStaff.jsx` | Near-identical CRUD scaffolding, ~250 lines each | ⏳ PENDING |
 | 18 | 🟢 Low | Performance | `server/controllers/statsController.js:6-30`, `floorController.js:7-9` | Full slot arrays loaded into memory just to count statuses | ⏳ PENDING |
-| 19 | 🟢 Low | Performance | `server/controllers/authController.js:56-58` | `getMe` re-queries a user already loaded by `protect` | ⏳ PENDING |
+| 19 | 🟢 Low | Performance | `server/controllers/authController.js:56-58` | `getMe` re-queries a user already loaded by `protect` | ✅ FIXED |
 | 20 | 🟢 Low | Security (dependency) | `server/package-lock.json` (transitive) | `body-parser < 1.20.6` — low-severity DoS advisory | ✅ FIXED |
 | 21 | 🟢 Low | Production | `server/index.js:54-56` | `/api/health` reports "ok" even if MongoDB never connected | ✅ FIXED |
 
@@ -264,7 +264,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `protect` middleware already runs `User.findById(decoded.id).select('-password')` and attaches the result to `req.user` on *every* request, including this one. `getMe` then runs a **second**, near-identical `User.findById(req.user._id)` (only difference: it adds `.populate('assignedFloor', ...)`), instead of just populating the already-fetched `req.user`.
 - **Impact:** One entirely avoidable extra round-trip to MongoDB on every single call to `GET /api/auth/me` — which happens on every page load for every user (see [AuthContext.jsx:22](client/src/context/AuthContext.jsx)).
 - **Best fix:** `await req.user.populate('assignedFloor', 'name level')` directly instead of re-querying by ID.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** `getMe` now calls `req.user.populate('assignedFloor', 'name level')` directly on the document `protect` already loaded, instead of a second `User.findById`. Verified against a live server: response shape is unchanged (populated `assignedFloor` with `name`/`level`, `password` still excluded) for a security user, and the admin edge case (`assignedFloor: null`) still resolves correctly without `.populate()` throwing on a null path.
 
 ### P3 — No route-based code splitting on the client
 - **Severity:** 🟢 Low

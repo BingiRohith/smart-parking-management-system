@@ -73,6 +73,8 @@ exports.logout = (req, res) => {
 };
 
 exports.getMe = async (req, res) => {
-  const user = await User.findById(req.user._id).populate('assignedFloor', 'name level');
-  res.status(200).json({ user });
+  // req.user is already loaded by the protect middleware -- just populate
+  // the field this endpoint additionally needs instead of re-querying it.
+  await req.user.populate('assignedFloor', 'name level');
+  res.status(200).json({ user: req.user });
 };
