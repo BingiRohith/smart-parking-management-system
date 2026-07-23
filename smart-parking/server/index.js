@@ -2,6 +2,7 @@ require('dotenv').config();
 require('express-async-errors');
 const express = require('express');
 const http = require('http');
+const mongoose = require('mongoose');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -30,9 +31,6 @@ const io = new Server(server, {
 // Make io available in route handlers via req.app.get('io')
 app.set('io', io);
 
-// Connect to MongoDB
-connectDB();
-
 // ─── MIDDLEWARE ───────────────────────────────────────────────────────────────
 app.use(
   cors({
@@ -50,9 +48,16 @@ app.use('/api/floors', floorRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/stats', statsRoutes);
 
-// Health check
+// Health check — reflects actual MongoDB connection state, not just that
+// the HTTP server is up, so orchestrators/load balancers don't route
+// traffic to an instance that can't actually serve DB-backed requests.
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  const dbConnected = mongoose.connection.readyState === 1;
+  res.status(dbConnected ? 200 : 503).json({
+    status: dbConnected ? 'ok' : 'degraded',
+    db: mongoose.STATES[mongoose.connection.readyState],
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // 404 handler
@@ -67,7 +72,15 @@ app.use(errorHandler);
 socketHandler(io);
 
 // ─── START SERVER ─────────────────────────────────────────────────────────────
+// Connect to MongoDB *before* accepting HTTP traffic, so the server never
+// reports itself as up (via /api/health or otherwise) while DB-backed
+// routes would actually hang or fail.
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`\n🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-});
+
+(async () => {
+  await connectDB();
+
+  server.listen(PORT, () => {
+    console.log(`\n🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  });
+})();

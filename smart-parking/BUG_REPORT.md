@@ -12,7 +12,7 @@
 |---|---|---|---|---|---|
 | 1 | 🔴 Critical | Production/Security | *(missing)* `.gitignore` | No root or `server/.gitignore` — `.env` secrets and `node_modules` are uncommitted-only by luck | ✅ FIXED |
 | 2 | 🟠 High | Missing Dependency | `server/package.json:8` | `npm run dev` calls `nodemon`, which is never declared as a dependency | ✅ FIXED |
-| 3 | 🟠 High | Async Bug/Production | `server/index.js:34,71` | Server starts accepting requests before `connectDB()` resolves | ⏳ PENDING |
+| 3 | 🟠 High | Async Bug/Production | `server/index.js:34,71` | Server starts accepting requests before `connectDB()` resolves | ✅ FIXED |
 | 4 | 🟠 High | Security | `server/controllers/authController.js:10-18` | `sameSite: 'strict'` cookie will silently break auth on cross-domain production deploys | ⏳ PENDING |
 | 5 | 🟠 High | Security | `server/routes/auth.js`, whole API | No rate limiting anywhere — login is brute-forceable | ⏳ PENDING |
 | 6 | 🟡 Medium | Validation/Runtime | `server/controllers/authController.js:39` | Login username isn't lowercased before query, but stored usernames are forced lowercase | ⏳ PENDING |
@@ -30,7 +30,7 @@
 | 18 | 🟢 Low | Performance | `server/controllers/statsController.js:6-30`, `floorController.js:7-9` | Full slot arrays loaded into memory just to count statuses | ⏳ PENDING |
 | 19 | 🟢 Low | Performance | `server/controllers/authController.js:56-58` | `getMe` re-queries a user already loaded by `protect` | ⏳ PENDING |
 | 20 | 🟢 Low | Security (dependency) | `server/package-lock.json` (transitive) | `body-parser < 1.20.6` — low-severity DoS advisory | ⏳ PENDING |
-| 21 | 🟢 Low | Production | `server/index.js:54-56` | `/api/health` reports "ok" even if MongoDB never connected | ⏳ PENDING |
+| 21 | 🟢 Low | Production | `server/index.js:54-56` | `/api/health` reports "ok" even if MongoDB never connected | ✅ FIXED |
 
 Full detail for every item follows, grouped exactly by the categories requested. Each entry's **Status** line records what was actually done.
 
@@ -52,7 +52,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `connectDB()` is called without `await` and without blocking startup; `server.listen(PORT, ...)` runs immediately afterward regardless of whether Mongo has connected yet. Empirically confirmed: running `node index.js` with no reachable MongoDB printed `🚀 Server running...` immediately, with no connection error surfacing for many seconds (Mongo driver's default server-selection timeout is ~30s).
 - **Impact:** For the first several seconds after boot (or indefinitely if Mongo is unreachable), the server responds to HTTP requests as if healthy, but every DB-backed route will hang (Mongoose buffers commands by default until `bufferTimeoutMS`, default 10s) or error out unpredictably. This is especially bad in orchestrated environments (Docker/K8s) where a readiness probe hitting `/api/health` (see **Production #P5**) would report healthy while the app is not actually usable.
 - **Best fix:** `await connectDB()` before calling `server.listen(...)`, or expose a readiness flag that `/api/health` checks (`mongoose.connection.readyState === 1`).
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Wrapped startup in an async IIFE that `await connectDB()`s before calling `server.listen(...)`. Verified with a real in-memory MongoDB instance: a request fired 300ms after boot now gets connection-refused (server isn't listening yet) instead of a premature 200; once Mongo connects, `/api/health` and `/api/floors` both work correctly. Also verified that with an unreachable `MONGODB_URI`, the server no longer prints "Server running" at all (previously it did, immediately, regardless of DB state).
 
 ### R2 — Modal body-scroll lock can be prematurely released with nested modals
 - **Severity:** 🟢 Low
@@ -354,7 +354,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 
 ### AB1 — Server startup race condition
 - **Severity:** 🟠 High — see **Runtime Errors #R1** above for full detail (same issue: `connectDB()` not awaited before `server.listen()`).
-- **Status:** ⏳ PENDING
+- **Status:** ✅ FIXED — see R1 above.
 
 ### AB2 — Stale-response race condition in `useFloor`
 - **Severity:** 🟡 Medium
@@ -402,7 +402,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** The health check unconditionally returns `{ status: 'ok' }` — it never checks `mongoose.connection.readyState`, so it reports healthy even when the database is unreachable (directly compounding **R1**).
 - **Impact:** Any deployment platform using this endpoint for liveness/readiness checks (load balancer, container orchestrator) would keep routing traffic to an instance that can't actually serve any real request.
 - **Best fix:** Check `mongoose.connection.readyState === 1` and return a `503` if not connected.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED** — see R1 above; `/api/health` now checks `mongoose.connection.readyState` and returns `503`/`degraded` when not connected, `200`/`ok` when connected. Verified live against an in-memory MongoDB instance.
 
 ### PR6 — Console-only logging, no structured/leveled logger
 - **Severity:** 🟢 Low — see **Performance #P4** above; same root cause, production-monitoring angle.
