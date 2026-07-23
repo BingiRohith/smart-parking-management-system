@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
-import socket from '../services/socket';
+import socket, { acquireSocket, releaseSocket } from '../services/socket';
 
 /**
  * useFloor — fetches a specific floor's slot layout and subscribes
@@ -39,11 +39,18 @@ export const useFloor = (floorId) => {
     fetchFloor();
   }, [fetchFloor]);
 
-  // Real-time socket subscription
+  // Acquire the shared socket connection once for the lifetime of this
+  // hook instance -- deliberately NOT keyed on floorId, so navigating
+  // between floors doesn't disconnect/reconnect the transport, only the
+  // room membership (handled separately below) changes.
+  useEffect(() => {
+    acquireSocket();
+    return () => releaseSocket();
+  }, []);
+
+  // Real-time room subscription — re-joins/leaves per floorId change.
   useEffect(() => {
     if (!floorId) return;
-
-    if (!socket.connected) socket.connect();
 
     socket.emit('join_floor', floorId);
 

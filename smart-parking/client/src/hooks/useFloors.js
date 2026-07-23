@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
-import socket from '../services/socket';
+import socket, { acquireSocket, releaseSocket } from '../services/socket';
 
 /**
  * useFloors — fetches summary of all active floors and updates
@@ -30,7 +30,7 @@ export const useFloors = () => {
 
   // Real-time: update floor summary counts when any slot changes
   useEffect(() => {
-    if (!socket.connected) socket.connect();
+    acquireSocket();
 
     const handleSummaryUpdate = ({ floorId, availableCount, occupiedCount }) => {
       setFloors((prev) =>
@@ -42,6 +42,7 @@ export const useFloors = () => {
 
     return () => {
       socket.off('floor_summary_updated', handleSummaryUpdate);
+      releaseSocket();
     };
   }, []);
 

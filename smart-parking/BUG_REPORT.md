@@ -23,7 +23,7 @@
 | 11 | 🟡 Medium | Async Bug | `client/src/hooks/useFloor.js:14-26` | No guard against out-of-order responses when `floorId` changes quickly | ✅ FIXED |
 | 12 | 🟡 Medium | Unhandled Exception | `server/index.js` (whole file) | No `process.on('unhandledRejection'/'uncaughtException')` safety net | ⏳ PENDING |
 | 13 | 🟡 Medium | Unhandled Exception | `server/middleware/errorHandler.js:6-10` | Assumes `err.keyValue` always exists; would itself throw if not | ⏳ PENDING |
-| 14 | 🟢 Low | Memory/Resource Leak | `client/src/services/socket.js` | Shared socket is connected lazily but never explicitly disconnected | ⏳ PENDING |
+| 14 | 🟢 Low | Memory/Resource Leak | `client/src/services/socket.js` | Shared socket is connected lazily but never explicitly disconnected | ✅ FIXED |
 | 15 | 🟢 Low | Dead Code | `server/utils/seed.js:2` | `mongoose` imported, never used | ✅ FIXED |
 | 16 | 🟢 Low | Duplicate Code | `server/utils/seed.js:7-22` vs `server/controllers/floorController.js:104-117` | Slot-generation logic duplicated and drifted | ✅ FIXED |
 | 17 | 🟢 Low | Duplicate Code | `client/src/pages/admin/AdminFloors.jsx` vs `AdminStaff.jsx` | Near-identical CRUD scaffolding, ~250 lines each | ⏳ PENDING |
@@ -332,7 +332,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `socket.connect()` is called the first time a floor-related hook mounts, but there is no corresponding `socket.disconnect()` anywhere in the codebase — not on logout, not on navigating away to pages that don't need real-time data (e.g., `/admin`, `/login`), not ever.
 - **Impact:** Not a JS heap memory leak in the traditional sense (the hooks do correctly clean up their individual event listeners with `socket.off(...)` on unmount), but it is a **lingering resource leak**: once any user visits the homepage or a floor page, an open WebSocket connection stays alive to the server for the rest of the browser tab's lifetime, even while the user is deep in the unrelated admin console or logged out entirely. At scale, this means the server holds open far more idle socket connections than there are actually "active" floor viewers.
 - **Best fix:** Either disconnect the socket when the last consumer unmounts (e.g., a small reference-count wrapper around the shared instance), or explicitly `socket.disconnect()` in `AuthContext.logout()` and reconnect on next use.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Added `acquireSocket()`/`releaseSocket()` to `socket.js`, backed by a module-level reference count: `socket.connect()` fires when the count goes 0→1, `socket.disconnect()` fires when it drops back to 0. `useFloors` calls acquire/release around its mount/unmount. `useFloor` needed a bit more care — its socket usage effect was originally keyed on `floorId`, and naively wiring acquire/release into that same effect would have caused a disconnect+reconnect *every time the user navigates between floors*, not just on mount/unmount. Split it into two effects: a mount/unmount-only effect owning the connection lifecycle, and a separate `floorId`-keyed effect owning only room `join_floor`/`leave_floor` membership. Verified in a real browser by watching the server's own connect/disconnect logs while navigating: leaving all floor/homepage pages for `/admin` (which needs no real-time data) correctly disconnects the socket with no new connection following, and navigating back to the homepage correctly reconnects it.
 
 ---
 
