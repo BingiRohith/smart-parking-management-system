@@ -1,25 +1,15 @@
 const Floor = require('../models/Floor');
-const { generateSlots } = require('../utils/slots');
+const { generateSlots, slotCountProjection } = require('../utils/slots');
 
 // ─── PUBLIC ROUTES (no auth) ──────────────────────────────────────────────────
 
 // GET /api/floors — summary of all active floors
 exports.getAllFloors = async (req, res) => {
-  // totalSlots is a virtual derived from slots, so slots must stay selected
-  // even though only the count is returned in the summary below.
-  const floors = await Floor.find({ isActive: true })
-    .select('name level slots displayOrder')
-    .sort({ displayOrder: 1, level: -1 });
-
-  const summary = floors.map((floor) => ({
-    _id: floor._id,
-    name: floor.name,
-    level: floor.level,
-    totalSlots: floor.totalSlots,
-    availableCount: floor.availableCount,
-    occupiedCount: floor.occupiedCount,
-    displayOrder: floor.displayOrder,
-  }));
+  const summary = await Floor.aggregate([
+    { $match: { isActive: true } },
+    { $project: { name: 1, level: 1, displayOrder: 1, ...slotCountProjection } },
+    { $sort: { displayOrder: 1, level: -1 } },
+  ]);
 
   res.status(200).json({ floors: summary });
 };

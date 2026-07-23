@@ -27,7 +27,7 @@
 | 15 | 🟢 Low | Dead Code | `server/utils/seed.js:2` | `mongoose` imported, never used | ✅ FIXED |
 | 16 | 🟢 Low | Duplicate Code | `server/utils/seed.js:7-22` vs `server/controllers/floorController.js:104-117` | Slot-generation logic duplicated and drifted | ✅ FIXED |
 | 17 | 🟢 Low | Duplicate Code | `client/src/pages/admin/AdminFloors.jsx` vs `AdminStaff.jsx` | Near-identical CRUD scaffolding, ~250 lines each | ⏳ PENDING |
-| 18 | 🟢 Low | Performance | `server/controllers/statsController.js:6-30`, `floorController.js:7-9` | Full slot arrays loaded into memory just to count statuses | ⏳ PENDING |
+| 18 | 🟢 Low | Performance | `server/controllers/statsController.js:6-30`, `floorController.js:7-9` | Full slot arrays loaded into memory just to count statuses | ✅ FIXED |
 | 19 | 🟢 Low | Performance | `server/controllers/authController.js:56-58` | `getMe` re-queries a user already loaded by `protect` | ✅ FIXED |
 | 20 | 🟢 Low | Security (dependency) | `server/package-lock.json` (transitive) | `body-parser < 1.20.6` — low-severity DoS advisory | ✅ FIXED |
 | 21 | 🟢 Low | Production | `server/index.js:54-56` | `/api/health` reports "ok" even if MongoDB never connected | ✅ FIXED |
@@ -256,7 +256,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** Both handlers fetch entire `Floor` documents (including every embedded slot) and then filter the in-memory array in JavaScript (via the `availableCount`/`occupiedCount` virtuals or manual `.filter()`) purely to produce a count.
 - **Impact:** At the current demo scale (~30-90 total slots across 3 floors) this is unnoticeable. At real mall scale (potentially thousands of slots per floor, many floors), this means transferring and holding the entire slot inventory in memory on every homepage load and every stats-panel refresh (which itself polls every 30s — see [AdminOverview.jsx:33](client/src/pages/admin/AdminOverview.jsx)), just to return a handful of integers.
 - **Best fix:** Use a MongoDB aggregation pipeline (`$project` with `$size`/`$filter` on `slots`) to compute counts server-side without pulling the full array into Node.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Both `getAllFloors` and `getStats` now use `Floor.aggregate([...])` with a shared `slotCountProjection` (`server/utils/slots.js`) that computes `totalSlots`/`availableCount`/`occupiedCount` via `$size`/`$filter` inside MongoDB — the full `slots` array (with every slot's number/row/position/timestamps) is never transferred for these two endpoints anymore, only the three counts per floor. (`getFloorById`, which genuinely needs the full slot grid for rendering, is unchanged.) Verified against a live server: floor summaries and stats totals match exactly as before, and after toggling 3 of Ground Floor's 30 slots occupied, `occupancyRate` correctly computes to `10` and all aggregate totals (`totalOccupied`, `totalFloors`, `totalStaff`, etc.) are correct.
 
 ### P2 — Redundant duplicate database query in `getMe`
 - **Severity:** 🟢 Low

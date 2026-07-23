@@ -19,4 +19,18 @@ const generateSlots = (rows, slotsPerRow) => {
   return slots;
 };
 
-module.exports = { generateSlots };
+// Reusable aggregation $project stage: counts slots by status inside
+// MongoDB instead of transferring the full embedded slots array to Node
+// just to filter/count it in JS -- matters once floors have
+// hundreds/thousands of slots rather than the current demo scale.
+const slotCountProjection = {
+  totalSlots: { $size: '$slots' },
+  availableCount: {
+    $size: { $filter: { input: '$slots', as: 's', cond: { $eq: ['$$s.status', 'available'] } } },
+  },
+  occupiedCount: {
+    $size: { $filter: { input: '$slots', as: 's', cond: { $eq: ['$$s.status', 'occupied'] } } },
+  },
+};
+
+module.exports = { generateSlots, slotCountProjection };
