@@ -1,3 +1,6 @@
+# Claude Code local tooling (machine-specific launch config, not app code)
+.claude/
+
 # Dependencies
 node_modules/
 
@@ -20,7 +23,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Editor directories and files
+# Editor / OS files
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -32,4 +35,3 @@ lerna-debug.log*
 *.sw?
 
 *.local
-.claude/
