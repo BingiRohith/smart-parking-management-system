@@ -67,8 +67,10 @@ exports.updateStaff = async (req, res) => {
   res.status(200).json({ message: 'Staff updated.', staff: populated });
 };
 
-// DELETE /api/staff/:id — deactivate staff
-exports.deleteStaff = async (req, res) => {
+// DELETE /api/staff/:id — soft delete (set isActive = false). Named
+// deactivateStaff rather than deleteStaff since it never removes the
+// document -- only the HTTP verb/route stay DELETE for convention.
+exports.deactivateStaff = async (req, res) => {
   const staff = await User.findOneAndUpdate(
     { _id: req.params.id, role: 'security' },
     { isActive: false },

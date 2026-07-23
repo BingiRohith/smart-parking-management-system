@@ -6,7 +6,7 @@ const {
   updateSlotStatus,
   createFloor,
   updateFloor,
-  deleteFloor,
+  deactivateFloor,
   getAllFloorsAdmin,
 } = require('../controllers/floorController');
 const { protect, restrictTo } = require('../middleware/auth');
@@ -22,6 +22,6 @@ router.patch('/:floorId/slots/:slotId', protect, restrictTo('admin', 'security')
 router.get('/admin/all', protect, restrictTo('admin'), getAllFloorsAdmin);
 router.post('/', protect, restrictTo('admin'), createFloor);
 router.put('/:id', protect, restrictTo('admin'), updateFloor);
-router.delete('/:id', protect, restrictTo('admin'), deleteFloor);
+router.delete('/:id', protect, restrictTo('admin'), deactivateFloor);
 
 module.exports = router;

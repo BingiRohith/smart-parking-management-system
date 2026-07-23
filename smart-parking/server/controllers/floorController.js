@@ -145,8 +145,10 @@ exports.updateFloor = async (req, res) => {
   res.status(200).json({ message: 'Floor updated.', floor });
 };
 
-// DELETE /api/floors/:id — soft delete (set isActive = false)
-exports.deleteFloor = async (req, res) => {
+// DELETE /api/floors/:id — soft delete (set isActive = false). Named
+// deactivateFloor rather than deleteFloor since it never removes the
+// document -- only the HTTP verb/route stay DELETE for convention.
+exports.deactivateFloor = async (req, res) => {
   const floor = await Floor.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
 
   if (!floor) return res.status(404).json({ message: 'Floor not found.' });

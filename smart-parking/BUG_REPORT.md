@@ -90,7 +90,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** Both handlers perform a soft update (`isActive: false`) rather than an actual delete, despite being bound to the `DELETE` HTTP verb and named `delete*`.
 - **Impact:** Not a functional defect (the frontend and docs are consistent about this being "deactivate"), but it's a REST semantics mismatch that will surprise any future API consumer expecting `DELETE` to be destructive/idempotent-removal.
 - **Best fix:** Rename the functions/routes to something like `PATCH /api/floors/:id/deactivate`, or document the soft-delete semantics explicitly in the API contract (partially done in the README already — just not in the code/route naming).
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED, scoped to naming only.** Renamed `deleteFloor`/`deleteStaff` to `deactivateFloor`/`deactivateStaff` (with a clarifying comment) in both controllers and their route imports. Deliberately left the routes themselves as `DELETE /api/floors/:id` / `DELETE /api/staff/:id` rather than introducing a new `PATCH .../deactivate` endpoint — changing the wire-level route/method would be a breaking API change requiring corresponding client updates, which is out of scope for a naming-clarity fix. Verified against a live server: both `DELETE` endpoints still behave identically (`200`, floor/staff correctly marked `isActive: false`).
 
 ### A2 — No pagination on list endpoints
 - **Severity:** 🟢 Low
