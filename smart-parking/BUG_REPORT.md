@@ -24,7 +24,7 @@
 | 12 | 🟡 Medium | Unhandled Exception | `server/index.js` (whole file) | No `process.on('unhandledRejection'/'uncaughtException')` safety net | ⏳ PENDING |
 | 13 | 🟡 Medium | Unhandled Exception | `server/middleware/errorHandler.js:6-10` | Assumes `err.keyValue` always exists; would itself throw if not | ⏳ PENDING |
 | 14 | 🟢 Low | Memory/Resource Leak | `client/src/services/socket.js` | Shared socket is connected lazily but never explicitly disconnected | ⏳ PENDING |
-| 15 | 🟢 Low | Dead Code | `server/utils/seed.js:2` | `mongoose` imported, never used | ⏳ PENDING |
+| 15 | 🟢 Low | Dead Code | `server/utils/seed.js:2` | `mongoose` imported, never used | ✅ FIXED |
 | 16 | 🟢 Low | Duplicate Code | `server/utils/seed.js:7-22` vs `server/controllers/floorController.js:104-117` | Slot-generation logic duplicated and drifted | ⏳ PENDING |
 | 17 | 🟢 Low | Duplicate Code | `client/src/pages/admin/AdminFloors.jsx` vs `AdminStaff.jsx` | Near-identical CRUD scaffolding, ~250 lines each | ⏳ PENDING |
 | 18 | 🟢 Low | Performance | `server/controllers/statsController.js:6-30`, `floorController.js:7-9` | Full slot arrays loaded into memory just to count statuses | ⏳ PENDING |
@@ -292,7 +292,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** Grepped the entire file for `mongoose.` usage — zero matches. The module is required but never referenced; `connectDB()` (imported separately) handles the actual Mongoose connection internally.
 - **Impact:** Harmless, purely a cleanliness/clarity issue.
 - **Best fix:** Delete the unused import.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Removed the unused `require('mongoose')`. Verified `seed.js` still runs to completion successfully against a live database.
 
 ### DC2 — Redundant explicit schema option
 - **Severity:** 🟢 Low
@@ -300,7 +300,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `_id: true` is Mongoose's default for subdocuments; setting it explicitly does nothing.
 - **Impact:** None functionally — just noise that might mislead a reader into thinking it was deliberately toggled from a non-default.
 - **Best fix:** Remove the option, or add a comment if it's meant to guard against a future default change.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Removed the redundant `{ _id: true }` option. Verified against a live server: slot subdocuments still get a real `_id` (Mongoose's unaffected default), confirmed via a fresh seed + `GET /api/floors/:id` returning a proper ObjectId string per slot.
 
 ---
 

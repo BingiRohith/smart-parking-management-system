@@ -28,8 +28,7 @@ const slotSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
-  },
-  { _id: true }
+  }
 );
 const floorSchema = new mongoose.Schema(
   {
