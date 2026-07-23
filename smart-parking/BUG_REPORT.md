@@ -98,7 +98,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** Both return the entire collection unconditionally.
 - **Impact:** Fine at current demo scale (a handful of floors/staff); would degrade linearly as the org grows and become a real problem in a large multi-building deployment.
 - **Best fix:** Add `?page`/`?limit` query params with sane defaults before this is used beyond a single small facility.
-- **Status:** ⏳ PENDING — will be documented as intentionally not implemented (see end of report); adding paginated query params is new API surface, not a bug fix.
+- **Status:** ⛔ **INTENTIONALLY NOT IMPLEMENTED** — see [Intentionally Not Implemented](#intentionally-not-implemented) at the end of this report.
 
 *(See also **Validation #V1** for the related lack of bounds-checking on floor creation, and **Security #S6** for the public-endpoint PII leak, which is also arguably an API design issue.)*
 
@@ -272,7 +272,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** Every page component (driver, security, and the entire admin console) is bundled into a single JS chunk regardless of which route the user actually visits.
 - **Impact:** Minor at this app's current size (measured build: 354KB JS / 110KB gzip) — a driver who never logs in still downloads the full admin dashboard code. Not urgent, but a cheap win.
 - **Best fix:** Wrap route-level page imports in `React.lazy()` + `<Suspense>`, especially for the `/admin/*` subtree.
-- **Status:** ⏳ PENDING — likely to be documented as intentionally deferred; see end of report.
+- **Status:** ⛔ **INTENTIONALLY NOT IMPLEMENTED** — see [Intentionally Not Implemented](#intentionally-not-implemented) at the end of this report.
 
 ### P4 — Verbose per-event console logging with no level control
 - **Severity:** 🟢 Low
@@ -420,12 +420,25 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** Fonts are loaded from `fonts.googleapis.com`/`fonts.gstatic.com` with no `font-display` fallback strategy specified beyond the query string, and no self-hosted fallback.
 - **Impact:** In network environments where Google Fonts is blocked or slow (some corporate/restricted networks), page text rendering can be delayed or use an unstyled fallback longer than necessary. Minor, cosmetic.
 - **Best fix:** Self-host the font files, or accept the tradeoff consciously (it's a reasonable one for a project like this) — flagged for awareness, not urgency.
-- **Status:** ⏳ PENDING — on closer inspection the existing URL already includes `&display=swap`, which is the main mitigation for render-blocking; likely to be documented as intentionally not further changed (see end of report).
+- **Status:** ⛔ **INTENTIONALLY NOT CHANGED** — see [Intentionally Not Implemented](#intentionally-not-implemented) at the end of this report.
 
 ---
 
 ## Notes on Scope and What Was NOT Found
 
-- **No MongoDB instance was available** in this environment, so behaviors that only manifest against a live database under real data/load (e.g., confirming the exact timing of the D1 race condition, or exact Mongoose error shapes) are based on careful code reading rather than live reproduction. Everything else (build, install, lint, server boot, `npm audit`) was executed and observed directly. *(Update: an in-memory MongoDB instance was subsequently used during the fix pass to verify DB-dependent changes — see individual Status notes.)*
-- **No broken imports, no build-tool configuration errors, and no missing *runtime* dependencies were found** beyond the one dev-tooling gap (`nodemon`). The application's actual production dependency graph is sound.
+- **No MongoDB instance was available** in this environment initially, so the original audit's DB-dependent findings were based on careful code reading rather than live reproduction. **During the fix pass, an in-memory MongoDB instance (`mongodb-memory-server`) was set up and used to verify essentially every server-side fix against a real database** — seeding, login, slot updates (including concurrency stress-testing), floor/staff CRUD, CSRF, rate limiting, and more — rather than relying on code review alone. This paid off directly: fixing D2 (the `totalSlots` field) revealed the finding was actually already actively wrong, not just latent — every seeded demo floor had `totalSlots: 0` stored in the database even before this fix pass began, because `seed.js`'s `insertMany` bypasses the `pre('save')` hook that was supposed to keep it in sync.
+- **No broken imports, no build-tool configuration errors, and no missing *runtime* dependencies were found** beyond the one dev-tooling gap (`nodemon`), which is now fixed. The application's actual production dependency graph is sound.
+- **One finding (V3, username format constraints) was initially missed** when the fix task list was drawn up from this report, and was caught and fixed during the final pass rather than left dangling — see its entry above.
 - This report intentionally does not repeat items already covered in earlier project documentation ([PROJECT_UNDERSTANDING.md](PROJECT_UNDERSTANDING.md), [WORKFLOW.md](WORKFLOW.md)) except where directly relevant to a specific bug (e.g., referencing the request flow to explain why a race condition matters).
+
+---
+
+## Intentionally Not Implemented
+
+Per the instruction not to add new features while fixing bugs, three low-severity items from this report were deliberately left as-is rather than "fixed," because the fix itself would constitute new functionality or a breaking API change rather than a correction of existing behavior:
+
+- **A2 — No pagination on `/api/staff` and `/api/floors/admin/all`.** Adding `?page`/`?limit` query params would introduce new API surface (new accepted parameters, a new response shape for callers that want paged results) rather than fix incorrect existing behavior — the endpoints work correctly today at the scale this app is actually built for (a single facility's floors/staff, realistically dozens of rows at most). The report itself already flagged this as "fine at current scale," not an active defect.
+- **P3 — No route-based code splitting (`React.lazy`) on the client.** This is a bundling/performance optimization, not a bug — the app functions identically with or without it, just with a marginally larger initial download (354KB/110KB gzipped, already small). Splitting the bundle is a reasonable future improvement but isn't correcting broken behavior.
+- **PR7 — Google Fonts loaded without self-hosting.** On closer inspection while writing this section, the existing `<link>` tag already includes `&display=swap`, which is the standard mitigation for render-blocking web fonts — the actual risk described (fonts blocked entirely on restricted networks) would require self-hosting font files as a genuinely new asset-pipeline addition, not a fix to something currently broken.
+
+Every other finding in this report — all 21 items in the summary table, plus every additional item detailed in the body (V3, DUP2, ML1, UE1/UE2, PR4, AB2, AB3, DC1/DC2, and more) — was fixed and verified, most against a real running instance of the application (server booted against a live MongoDB, or the full client+server stack driven through an actual browser), not just by inspection. Each fix landed as its own git commit with a descriptive message.
