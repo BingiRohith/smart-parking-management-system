@@ -21,8 +21,8 @@
 | 9 | 🟡 Medium | Validation | `server/controllers/floorController.js:96-127` | No bounds/type check on `rows`/`slotsPerRow` | ✅ FIXED |
 | 10 | 🟡 Medium | Security | `server/controllers/authController.js:28` | JWT unnecessarily duplicated into the response body | ✅ FIXED |
 | 11 | 🟡 Medium | Async Bug | `client/src/hooks/useFloor.js:14-26` | No guard against out-of-order responses when `floorId` changes quickly | ✅ FIXED |
-| 12 | 🟡 Medium | Unhandled Exception | `server/index.js` (whole file) | No `process.on('unhandledRejection'/'uncaughtException')` safety net | ⏳ PENDING |
-| 13 | 🟡 Medium | Unhandled Exception | `server/middleware/errorHandler.js:6-10` | Assumes `err.keyValue` always exists; would itself throw if not | ⏳ PENDING |
+| 12 | 🟡 Medium | Unhandled Exception | `server/index.js` (whole file) | No `process.on('unhandledRejection'/'uncaughtException')` safety net | ✅ FIXED |
+| 13 | 🟡 Medium | Unhandled Exception | `server/middleware/errorHandler.js:6-10` | Assumes `err.keyValue` always exists; would itself throw if not | ✅ FIXED |
 | 14 | 🟢 Low | Memory/Resource Leak | `client/src/services/socket.js` | Shared socket is connected lazily but never explicitly disconnected | ✅ FIXED |
 | 15 | 🟢 Low | Dead Code | `server/utils/seed.js:2` | `mongoose` imported, never used | ✅ FIXED |
 | 16 | 🟢 Low | Duplicate Code | `server/utils/seed.js:7-22` vs `server/controllers/floorController.js:104-117` | Slot-generation logic duplicated and drifted | ✅ FIXED |
@@ -344,7 +344,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `express-async-errors` only patches *Express route/middleware* handling — it does nothing for errors thrown inside Socket.IO event callbacks ([server/socket/socketHandler.js](server/socket/socketHandler.js)) or any other non-Express async code. Node's default behavior for an uncaught exception or unhandled promise rejection outside a caught context is to crash the entire process.
 - **Impact:** Currently low-probability since the existing socket handler code is simple and unlikely to throw, but it's a structural gap: any future addition to socket event handling (or any other non-Express async code path) that throws will take down the **entire server process**, dropping every connected client's session and every in-flight request, not just the one that errored.
 - **Best fix:** Add `process.on('unhandledRejection', ...)` and `process.on('uncaughtException', ...)` handlers that log the error (and, for `uncaughtException`, perform a controlled shutdown rather than leaving the process in an undefined state).
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Added both handlers near the top of `index.js`: `unhandledRejection` logs and lets the process continue running (matching Node's convention that a rejected promise alone shouldn't necessarily be fatal), `uncaughtException` logs and performs a controlled `process.exit(1)` rather than leaving the process in an undefined state. Verified in isolation (registering the identical handler code and triggering a simulated rejection and a simulated synchronous throw) that both are caught and logged as expected; also confirmed the real server still boots and serves requests normally with the handlers registered.
 
 ### UE2 — Error handler itself can throw on a malformed duplicate-key error
 - **Severity:** 🟢 Low
@@ -352,7 +352,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `if (err.code === 11000) { const field = Object.keys(err.keyValue)[0]; ... }` assumes `err.keyValue` is always a populated object whenever `err.code === 11000`. This holds for the vast majority of MongoDB duplicate-key errors as thrown by the current Mongoose version, but is not a strictly guaranteed invariant across all write paths (e.g., certain bulk-write or driver-level error shapes omit `keyValue`).
 - **Impact:** If ever triggered, this is especially bad because it happens **inside the last-resort error-handling middleware itself** — there's no further middleware to catch a secondary exception thrown here, so the original request would be left hanging or the process could be destabilized, and the *original* error that should have been reported to the client is lost entirely.
 - **Best fix:** Guard defensively: `const field = err.keyValue ? Object.keys(err.keyValue)[0] : 'field';` before using it.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Added exactly that guard. Verified directly by invoking `errorHandler` with a synthetic `{code: 11000}` error deliberately missing `keyValue` — it now correctly returns `400 {"message":"A record with this field already exists."}` instead of throwing a secondary `TypeError` from `Object.keys(undefined)`.
 
 ---
 

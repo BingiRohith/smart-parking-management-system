@@ -17,6 +17,20 @@ const floorRoutes = require('./routes/floors');
 const staffRoutes = require('./routes/staff');
 const statsRoutes = require('./routes/stats');
 
+// express-async-errors only covers Express route/middleware handling --
+// it does nothing for errors thrown in non-Express async code (e.g. a
+// future addition to socketHandler.js). Without these, an uncaught error
+// there would otherwise crash the whole process, dropping every
+// connected client, not just the one request/event that errored.
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+  process.exit(1);
+});
+
 const app = express();
 const server = http.createServer(app);
 
