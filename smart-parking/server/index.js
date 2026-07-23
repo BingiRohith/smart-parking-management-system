@@ -100,3 +100,19 @@ const PORT = process.env.PORT || 5000;
     console.log(`\n🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
   });
 })();
+
+// ─── GRACEFUL SHUTDOWN ────────────────────────────────────────────────────────
+// On SIGTERM/SIGINT (e.g. a container orchestrator restarting the
+// deployment, or Ctrl+C), stop accepting new connections and close the
+// Mongo connection cleanly instead of leaving both to the OS to tear down.
+const shutdown = (signal) => {
+  console.log(`\n${signal} received, shutting down gracefully...`);
+  server.close(async () => {
+    await mongoose.connection.close();
+    console.log('Server and database connection closed.');
+    process.exit(0);
+  });
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
