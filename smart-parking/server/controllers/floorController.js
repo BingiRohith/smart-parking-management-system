@@ -43,9 +43,6 @@ exports.updateSlotStatus = async (req, res) => {
     return res.status(400).json({ message: 'Status must be "available" or "occupied".' });
   }
 
-  const floor = await Floor.findById(floorId);
-  if (!floor) return res.status(404).json({ message: 'Floor not found.' });
-
   // Security staff can only update their assigned floor
   if (req.user.role === 'security') {
     if (!req.user.assignedFloor || req.user.assignedFloor.toString() !== floorId) {
@@ -53,14 +50,28 @@ exports.updateSlotStatus = async (req, res) => {
     }
   }
 
+  const floorExists = await Floor.exists({ _id: floorId });
+  if (!floorExists) return res.status(404).json({ message: 'Floor not found.' });
+
+  // Atomic positional update: avoids the load-mutate-save race where two
+  // concurrent requests editing different slots on the same floor could
+  // otherwise overwrite each other's changes.
+  const lastUpdated = new Date();
+  const floor = await Floor.findOneAndUpdate(
+    { _id: floorId, 'slots._id': slotId },
+    {
+      $set: {
+        'slots.$.status': status,
+        'slots.$.lastUpdated': lastUpdated,
+        'slots.$.lastUpdatedBy': req.user._id,
+      },
+    },
+    { new: true, runValidators: true }
+  );
+
+  if (!floor) return res.status(404).json({ message: 'Slot not found.' });
+
   const slot = floor.slots.id(slotId);
-  if (!slot) return res.status(404).json({ message: 'Slot not found.' });
-
-  slot.status = status;
-  slot.lastUpdated = new Date();
-  slot.lastUpdatedBy = req.user._id;
-
-  await floor.save();
 
   // Emit socket event to all connected clients
   const io = req.app.get('io');
@@ -69,7 +80,7 @@ exports.updateSlotStatus = async (req, res) => {
       floorId,
       slotId,
       status,
-      updatedAt: slot.lastUpdated,
+      updatedAt: lastUpdated,
     });
 
     // Also emit summary update to homepage listeners

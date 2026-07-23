@@ -17,7 +17,7 @@
 | 5 | 🟠 High | Security | `server/routes/auth.js`, whole API | No rate limiting anywhere — login is brute-forceable | ⏳ PENDING |
 | 6 | 🟡 Medium | Validation/Runtime | `server/controllers/authController.js:39` | Login username isn't lowercased before query, but stored usernames are forced lowercase | ✅ FIXED |
 | 7 | 🟡 Medium | Security | `server/controllers/floorController.js:26` | Public unauthenticated endpoint leaks staff names via `populate` | ⏳ PENDING |
-| 8 | 🟡 Medium | Database | `server/controllers/floorController.js:38-91` | Read-modify-write on `Floor.save()` risks lost updates under concurrent slot edits | ⏳ PENDING |
+| 8 | 🟡 Medium | Database | `server/controllers/floorController.js:38-91` | Read-modify-write on `Floor.save()` risks lost updates under concurrent slot edits | ✅ FIXED |
 | 9 | 🟡 Medium | Validation | `server/controllers/floorController.js:96-127` | No bounds/type check on `rows`/`slotsPerRow` | ⏳ PENDING |
 | 10 | 🟡 Medium | Security | `server/controllers/authController.js:28` | JWT unnecessarily duplicated into the response body | ⏳ PENDING |
 | 11 | 🟡 Medium | Async Bug | `client/src/hooks/useFloor.js:14-26` | No guard against out-of-order responses when `floorId` changes quickly | ⏳ PENDING |
@@ -118,7 +118,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
     { $set: { 'slots.$.status': status, 'slots.$.lastUpdated': new Date(), 'slots.$.lastUpdatedBy': req.user._id } }
   );
   ```
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** `updateSlotStatus` now uses `Floor.findOneAndUpdate({_id, 'slots._id': slotId}, {$set: {...}}, {new: true})`, which MongoDB executes as a single atomic document write — the load-then-save round trip is gone entirely. The role-based 403 check was moved earlier (it only needs `req.user`, not the floor document), and a lightweight `Floor.exists()` check distinguishes a 404 "Floor not found" from a 404 "Slot not found" without re-introducing a read-before-write step for the actual mutation. Verified with a real in-memory MongoDB: fired 20 concurrent PATCH requests at 20 different slots on the same floor via `Promise.all` — all 20 persisted correctly with zero lost updates (this is guaranteed by construction, since MongoDB single-document writes are always atomic, rather than relying on timing to "get lucky"). Also re-verified all existing behavior is unchanged: security-role 403 on wrong floor, 404 on bad floor/slot id, 400 on invalid status, 200 on valid updates by both admin and assigned security staff.
 
 ### D2 — `totalSlots` sync only happens via `.save()`, not query-style updates
 - **Severity:** 🟢 Low
