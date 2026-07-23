@@ -376,7 +376,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `const existingUser = await User.findOne({ username }); if (existingUser) {...}` followed later by `User.create({...})` is a classic time-of-check-to-time-of-use race: two concurrent requests creating the same username could both pass the `findOne` check before either has inserted, then both proceed to `create`.
 - **Impact:** Low practical risk (requires two near-simultaneous admin requests for the same new username) and is safety-netted by the schema's `unique: true` index on `username` — the second `create()` would fail with a Mongo duplicate-key error, correctly caught and formatted by `errorHandler`. So the failure mode is "confusing error on the loser" rather than actual data corruption, but the explicit pre-check gives a false sense of having fully prevented the race.
 - **Best fix:** Rely on the unique index alone (remove the redundant pre-check, or keep it purely as a UX nicety for the *common* case while acknowledging the index — not the pre-check — is what actually guarantees correctness).
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED (documentation only, no behavior change).** Kept the pre-check — it gives a friendlier error message in the common (non-racing) case — but added a comment making explicit that it's a UX nicety only, and that the schema's `unique: true` index is what actually guarantees no duplicate can ever be persisted, even under the race. No code path changed, so no functional re-verification was needed beyond a syntax check.
 
 ---
 

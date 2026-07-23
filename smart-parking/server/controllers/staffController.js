@@ -29,6 +29,12 @@ exports.createStaff = async (req, res) => {
     return res.status(400).json({ message: 'name, username, and password are required.' });
   }
 
+  // UX nicety only, not the source of truth for uniqueness: two concurrent
+  // requests for the same new username could both pass this check before
+  // either has inserted. The schema's `unique: true` index on username is
+  // what actually guarantees correctness -- the loser of that race gets a
+  // slightly less friendly duplicate-key error via errorHandler instead of
+  // this message, but no duplicate can ever actually be persisted.
   const existingUser = await User.findOne({ username });
   if (existingUser) {
     return res.status(400).json({ message: 'Username already taken.' });
