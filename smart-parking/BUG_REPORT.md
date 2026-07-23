@@ -242,7 +242,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** Only presence is checked; no restriction on length, characters, or whitespace.
 - **Impact:** Usernames containing spaces or unusual characters could be created, leading to confusing login UX or edge cases in any future username-based lookups/URLs.
 - **Best fix:** Add a simple regex constraint (e.g., alphanumeric + underscore, 3–30 chars) at the schema or controller level.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED** *(this one was initially missed when scheduling fixes from this report — caught during the final pass and fixed rather than left dangling)*. Added `minlength: 3`, `maxlength: 30`, and a `match: /^[a-z0-9_]+$/` validator to `User.username` at the schema level (runs after the existing `trim`/`lowercase` setters, so e.g. `MixedCase1` is accepted and stored as `mixedcase1`). Verified against a live server: seeded demo usernames (`admin`, `security_g`, etc.) still validate and seed successfully; creating staff with a too-short username, a space, or a special character all correctly return `400` with a clear message; a valid mixed-case username still succeeds.
 
 *(See also **Security #S7** for the related weak password-length-only policy.)*
 
