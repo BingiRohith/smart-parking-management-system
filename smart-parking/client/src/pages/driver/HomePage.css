@@ -1,0 +1,122 @@
+.home-page {
+  padding: var(--space-10) 0 var(--space-16);
+}
+
+/* ─── Hero ───────────────────────────────────────────────────────────────────── */
+.home-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin-bottom: var(--space-10);
+  padding-bottom: var(--space-10);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.home-hero__title {
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: var(--space-4);
+}
+
+.home-hero__title-accent {
+  color: var(--color-primary-light);
+}
+
+.home-hero__subtitle {
+  font-size: 15px;
+  color: var(--color-text-muted);
+  max-width: 400px;
+  line-height: 1.7;
+}
+
+.home-hero__stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+  flex-shrink: 0;
+}
+
+.home-hero__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.home-hero__stat-number {
+  font-size: 36px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--color-primary-light);
+  line-height: 1;
+}
+
+.home-hero__stat-label {
+  font-size: 11px;
+  color: var(--color-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.home-hero__stat-divider {
+  width: 1px;
+  height: 40px;
+  background: var(--color-border);
+}
+
+/* ─── Live Bar ───────────────────────────────────────────────────────────────── */
+.home-live-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-8);
+}
+
+.home-live-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--color-available);
+  border-radius: 50%;
+  animation: pulse-green 2s ease infinite;
+}
+
+/* ─── Floors Grid ────────────────────────────────────────────────────────────── */
+.home-floors__heading {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: var(--space-1);
+}
+
+.home-floors__sub {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-6);
+}
+
+.home-floors__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-5);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .home-hero {
+    flex-direction: column;
+  }
+
+  .home-hero__stats {
+    width: 100%;
+    justify-content: center;
+  }
+}

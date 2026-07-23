@@ -1,0 +1,173 @@
+.admin-page-header {
+  margin-bottom: var(--space-8);
+}
+
+.admin-page-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-1);
+}
+
+.admin-page-sub {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.admin-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: var(--space-5);
+}
+
+/* ─── Top Stats ──────────────────────────────────────────────────────────────── */
+.admin-overview__top-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.admin-stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.admin-stat-card--available {
+  background: var(--color-available-bg);
+  border-color: var(--color-available-border);
+}
+
+.admin-stat-card--occupied {
+  background: var(--color-occupied-bg);
+  border-color: var(--color-occupied-border);
+}
+
+.admin-stat-card__value {
+  font-size: 34px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  line-height: 1;
+  margin-bottom: var(--space-1);
+}
+
+.admin-stat-card--available .admin-stat-card__value {
+  color: var(--color-available);
+}
+
+.admin-stat-card--occupied .admin-stat-card__value {
+  color: var(--color-occupied);
+}
+
+.admin-stat-card__label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.admin-stat-card__sub {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  margin-top: var(--space-1);
+}
+
+/* ─── Floor Table ────────────────────────────────────────────────────────────── */
+.admin-overview__floors {
+  margin-bottom: var(--space-6);
+}
+
+.admin-floor-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-floor-table__header,
+.admin-floor-table__row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 2fr;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+}
+
+.admin-floor-table__header {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-dim);
+  font-weight: 600;
+}
+
+.admin-floor-table__row {
+  background: var(--color-surface-2);
+  font-size: 14px;
+  transition: background var(--transition-fast);
+}
+
+.admin-floor-table__row:hover {
+  background: var(--color-border);
+}
+
+.admin-floor-table__name {
+  font-weight: 600;
+}
+
+.admin-floor-table__available {
+  color: var(--color-available);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.admin-floor-table__occupied {
+  color: var(--color-occupied);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.admin-floor-table__bar-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.admin-floor-table__bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: var(--color-surface);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.admin-floor-table__bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-available), var(--color-occupied));
+  border-radius: var(--radius-full);
+  transition: width var(--transition-slow);
+}
+
+.admin-floor-table__pct {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  width: 36px;
+  text-align: right;
+}
+
+@media (max-width: 600px) {
+  .admin-floor-table__header,
+  .admin-floor-table__row {
+    grid-template-columns: 2fr 1fr 1fr;
+  }
+
+  .admin-floor-table__header span:nth-child(4),
+  .admin-floor-table__header span:nth-child(5),
+  .admin-floor-table__row span:nth-child(4),
+  .admin-floor-table__row span:nth-child(5) {
+    display: none;
+  }
+}

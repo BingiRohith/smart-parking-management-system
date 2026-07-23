@@ -1,0 +1,7 @@
+.admin-staff {
+  padding: var(--space-6);
+}
+
+.admin-staff__list {
+  overflow-x: auto;
+}

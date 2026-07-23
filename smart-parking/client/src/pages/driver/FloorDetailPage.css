@@ -1,0 +1,117 @@
+.floor-detail-page {
+  padding: var(--space-8) 0 var(--space-16);
+}
+
+.floor-detail__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-6);
+}
+
+.floor-detail__breadcrumb a {
+  color: var(--color-text-muted);
+}
+
+.floor-detail__breadcrumb a:hover {
+  color: var(--color-primary-light);
+}
+
+.floor-detail__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.floor-detail__title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-2);
+}
+
+.floor-detail__live {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.floor-detail__live-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--color-available);
+  border-radius: 50%;
+  animation: pulse-green 2s ease infinite;
+}
+
+.floor-detail__summary {
+  display: flex;
+  gap: var(--space-4);
+  flex-shrink: 0;
+}
+
+.floor-detail__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-5);
+  min-width: 80px;
+}
+
+.floor-detail__stat--available {
+  background: var(--color-available-bg);
+  border-color: var(--color-available-border);
+}
+
+.floor-detail__stat--occupied {
+  background: var(--color-occupied-bg);
+  border-color: var(--color-occupied-border);
+}
+
+.floor-detail__stat-num {
+  font-size: 28px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.floor-detail__stat--available .floor-detail__stat-num {
+  color: var(--color-available);
+}
+
+.floor-detail__stat--occupied .floor-detail__stat-num {
+  color: var(--color-occupied);
+}
+
+.floor-detail__stat-lbl {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: var(--space-1);
+}
+
+.floor-detail__grid-wrapper {
+  margin-top: var(--space-4);
+  overflow-x: auto;
+}
+
+@media (max-width: 640px) {
+  .floor-detail__header {
+    flex-direction: column;
+  }
+
+  .floor-detail__summary {
+    width: 100%;
+    justify-content: space-around;
+  }
+}

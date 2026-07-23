@@ -1,0 +1,11 @@
+{
+  "name": "smart-parking",
+  "version": "1.0.0",
+  "description": "Smart Parking Availability System — BCA Final Year Project",
+  "scripts": {
+    "install:all": "cd server && npm install && cd ../client && npm install",
+    "seed": "cd server && node utils/seed.js",
+    "server": "cd server && node index.js",
+    "client": "cd client && npm run dev"
+  }
+}
