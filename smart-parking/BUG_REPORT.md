@@ -29,7 +29,7 @@
 | 17 | 🟢 Low | Duplicate Code | `client/src/pages/admin/AdminFloors.jsx` vs `AdminStaff.jsx` | Near-identical CRUD scaffolding, ~250 lines each | ⏳ PENDING |
 | 18 | 🟢 Low | Performance | `server/controllers/statsController.js:6-30`, `floorController.js:7-9` | Full slot arrays loaded into memory just to count statuses | ⏳ PENDING |
 | 19 | 🟢 Low | Performance | `server/controllers/authController.js:56-58` | `getMe` re-queries a user already loaded by `protect` | ⏳ PENDING |
-| 20 | 🟢 Low | Security (dependency) | `server/package-lock.json` (transitive) | `body-parser < 1.20.6` — low-severity DoS advisory | ⏳ PENDING |
+| 20 | 🟢 Low | Security (dependency) | `server/package-lock.json` (transitive) | `body-parser < 1.20.6` — low-severity DoS advisory | ✅ FIXED |
 | 21 | 🟢 Low | Production | `server/index.js:54-56` | `/api/health` reports "ok" even if MongoDB never connected | ✅ FIXED |
 
 Full detail for every item follows, grouped exactly by the categories requested. Each entry's **Status** line records what was actually done.
@@ -212,7 +212,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `npm audit` reports `body-parser < 1.20.6` is vulnerable to a DoS where an invalid `limit` value silently disables body-size enforcement (GHSA-v422-hmwv-36x6).
 - **Impact:** Low severity per npm's own classification; a fix is already available.
 - **Best fix:** Run `npm audit fix` in `server/` (verified: a fix is available without a breaking major-version bump).
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Ran `npm audit fix` — resolved `body-parser` to `1.20.6` via `package-lock.json` only, no `package.json` version-range changes and no breaking bump. `npm audit` now reports 0 vulnerabilities. Verified the server still boots and serves requests correctly afterward.
 
 *(No vulnerabilities were reported for the client — `npm audit` returned 0 findings.)*
 
