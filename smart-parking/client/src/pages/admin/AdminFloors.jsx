@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
+import { useModalCrud } from '../../hooks/useModalCrud';
 import './AdminFloors.css';
 
 const EMPTY_FORM = { name: '', level: '', rows: '', slotsPerRow: '', displayOrder: '' };
@@ -11,16 +12,11 @@ const AdminFloors = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Modal state
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState(null); // null = create, object = edit
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [formError, setFormError] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  // Confirm delete state
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  const {
+    modalOpen, editTarget, form, formError, setFormError, saving, setSaving,
+    openCreate, openEdit, closeModal, handleFormChange,
+    deleteTarget, setDeleteTarget, deleting, setDeleting,
+  } = useModalCrud(EMPTY_FORM);
 
   const fetchFloors = useCallback(async () => {
     try {
@@ -36,30 +32,13 @@ const AdminFloors = () => {
 
   useEffect(() => { fetchFloors(); }, [fetchFloors]);
 
-  const openCreate = () => {
-    setEditTarget(null);
-    setForm(EMPTY_FORM);
-    setFormError('');
-    setModalOpen(true);
-  };
-
-  const openEdit = (floor) => {
-    setEditTarget(floor);
-    setForm({
-      name: floor.name,
-      level: String(floor.level),
-      rows: '',
-      slotsPerRow: '',
-      displayOrder: String(floor.displayOrder),
-    });
-    setFormError('');
-    setModalOpen(true);
-  };
-
-  const handleFormChange = (e) => {
-    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
-    setFormError('');
-  };
+  const openEditFloor = (floor) => openEdit(floor, {
+    name: floor.name,
+    level: String(floor.level),
+    rows: '',
+    slotsPerRow: '',
+    displayOrder: String(floor.displayOrder),
+  });
 
   const handleSave = async () => {
     setFormError('');
@@ -91,7 +70,7 @@ const AdminFloors = () => {
           displayOrder: Number(form.displayOrder) || 0,
         });
       }
-      setModalOpen(false);
+      closeModal();
       fetchFloors();
     } catch (err) {
       setFormError(err.response?.data?.message || 'Save failed. Please try again.');
@@ -167,7 +146,7 @@ const AdminFloors = () => {
                   </td>
                   <td>
                     <div className="admin-table__actions">
-                      <button className="btn btn--secondary btn--sm" onClick={() => openEdit(floor)}>
+                      <button className="btn btn--secondary btn--sm" onClick={() => openEditFloor(floor)}>
                         Edit
                       </button>
                       <button
@@ -189,7 +168,7 @@ const AdminFloors = () => {
       {/* Create / Edit Modal */}
       <Modal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeModal}
         title={editTarget ? `Edit — ${editTarget.name}` : 'Add New Floor'}
       >
         {formError && (
@@ -237,7 +216,7 @@ const AdminFloors = () => {
         )}
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-          <button className="btn btn--secondary" onClick={() => setModalOpen(false)} disabled={saving}>Cancel</button>
+          <button className="btn btn--secondary" onClick={closeModal} disabled={saving}>Cancel</button>
           <button className="btn btn--primary" onClick={handleSave} disabled={saving}>
             {saving ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Saving…</> : editTarget ? 'Save Changes' : 'Create Floor'}
           </button>

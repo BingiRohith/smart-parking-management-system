@@ -26,7 +26,7 @@
 | 14 | 🟢 Low | Memory/Resource Leak | `client/src/services/socket.js` | Shared socket is connected lazily but never explicitly disconnected | ✅ FIXED |
 | 15 | 🟢 Low | Dead Code | `server/utils/seed.js:2` | `mongoose` imported, never used | ✅ FIXED |
 | 16 | 🟢 Low | Duplicate Code | `server/utils/seed.js:7-22` vs `server/controllers/floorController.js:104-117` | Slot-generation logic duplicated and drifted | ✅ FIXED |
-| 17 | 🟢 Low | Duplicate Code | `client/src/pages/admin/AdminFloors.jsx` vs `AdminStaff.jsx` | Near-identical CRUD scaffolding, ~250 lines each | ⏳ PENDING |
+| 17 | 🟢 Low | Duplicate Code | `client/src/pages/admin/AdminFloors.jsx` vs `AdminStaff.jsx` | Near-identical CRUD scaffolding, ~250 lines each | ✅ FIXED |
 | 18 | 🟢 Low | Performance | `server/controllers/statsController.js:6-30`, `floorController.js:7-9` | Full slot arrays loaded into memory just to count statuses | ✅ FIXED |
 | 19 | 🟢 Low | Performance | `server/controllers/authController.js:56-58` | `getMe` re-queries a user already loaded by `protect` | ✅ FIXED |
 | 20 | 🟢 Low | Security (dependency) | `server/package-lock.json` (transitive) | `body-parser < 1.20.6` — low-severity DoS advisory | ✅ FIXED |
@@ -320,7 +320,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** Both files independently implement the same shape of state machine: `list/loading/error` state, `modalOpen/editTarget/form/formError/saving` state for create-or-edit, and `deleteTarget/deleting` (or `deactivateTarget/deactivating`) state for a confirm-then-delete flow, each wired to `Modal`/`ConfirmDialog` in near-identical ways.
 - **Impact:** Not a correctness bug, but a maintenance cost — any shared behavioral fix (e.g., better error formatting, optimistic UI, retry logic) has to be applied twice, and the two implementations can silently diverge over time exactly like DUP1 already did on the backend.
 - **Best fix:** Extract a shared `useCrudResource(endpoint)` hook (or a generic `<AdminResourceTable>` component) encapsulating fetch/create/edit/delete/modal state, parameterized by resource-specific fields and columns.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED, with one scope adjustment.** A fully generic single-endpoint `useCrudResource(endpoint)` didn't fit both pages cleanly: `AdminStaff` fetches *two* resources in parallel (`/staff` and `/floors`, the latter for the assignment dropdown), which a single-endpoint hook can't express without becoming an awkward leaky abstraction. Instead extracted `client/src/hooks/useModalCrud.js`, covering the part that was genuinely identical between the two pages — the create/edit modal state (`modalOpen`, `editTarget`, `form`, `formError`, `saving`) and confirm-delete state (`deleteTarget`, `deleting`), plus `openCreate`/`openEdit`/`closeModal`/`handleFormChange`. Each page still owns its own list-fetching (which was already legitimately different) and its own save/delete API calls and validation. This removed 7 duplicated `useState` declarations and ~15 lines of duplicated logic from each file. Verified end-to-end in a real browser: full create → edit → deactivate cycles on both **Admin Floors** (created "Rooftop", edited its display order, deactivated it) and **Admin Staff** (created "Test Guard", edited to assign "-2 Floor", deactivated it) all worked correctly through the shared hook.
 
 ---
 

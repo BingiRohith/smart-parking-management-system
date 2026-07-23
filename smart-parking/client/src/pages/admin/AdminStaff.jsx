@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
+import { useModalCrud } from '../../hooks/useModalCrud';
 import './AdminStaff.css';
 
 const EMPTY_FORM = { name: '', username: '', password: '', assignedFloor: '' };
@@ -12,14 +13,12 @@ const AdminStaff = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [formError, setFormError] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const [deactivateTarget, setDeactivateTarget] = useState(null);
-  const [deactivating, setDeactivating] = useState(false);
+  const {
+    modalOpen, editTarget, form, formError, setFormError, saving, setSaving,
+    openCreate, openEdit, closeModal, handleFormChange,
+    deleteTarget: deactivateTarget, setDeleteTarget: setDeactivateTarget,
+    deleting: deactivating, setDeleting: setDeactivating,
+  } = useModalCrud(EMPTY_FORM);
 
   const fetchData = useCallback(async () => {
     try {
@@ -39,29 +38,12 @@ const AdminStaff = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const openCreate = () => {
-    setEditTarget(null);
-    setForm(EMPTY_FORM);
-    setFormError('');
-    setModalOpen(true);
-  };
-
-  const openEdit = (member) => {
-    setEditTarget(member);
-    setForm({
-      name: member.name,
-      username: member.username,
-      password: '',
-      assignedFloor: member.assignedFloor?._id || '',
-    });
-    setFormError('');
-    setModalOpen(true);
-  };
-
-  const handleFormChange = (e) => {
-    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
-    setFormError('');
-  };
+  const openEditStaff = (member) => openEdit(member, {
+    name: member.name,
+    username: member.username,
+    password: '',
+    assignedFloor: member.assignedFloor?._id || '',
+  });
 
   const handleSave = async () => {
     setFormError('');
@@ -83,7 +65,7 @@ const AdminStaff = () => {
       } else {
         await api.post('/staff', payload);
       }
-      setModalOpen(false);
+      closeModal();
       fetchData();
     } catch (err) {
       setFormError(err.response?.data?.message || 'Save failed.');
@@ -159,7 +141,7 @@ const AdminStaff = () => {
                   </td>
                   <td>
                     <div className="admin-table__actions">
-                      <button className="btn btn--secondary btn--sm" onClick={() => openEdit(member)}>
+                      <button className="btn btn--secondary btn--sm" onClick={() => openEditStaff(member)}>
                         Edit
                       </button>
                       <button
@@ -181,7 +163,7 @@ const AdminStaff = () => {
       {/* Create / Edit Modal */}
       <Modal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeModal}
         title={editTarget ? `Edit — ${editTarget.name}` : 'Add Security Staff'}
       >
         {formError && <div className="login-form__error" role="alert">{formError}</div>}
@@ -213,7 +195,7 @@ const AdminStaff = () => {
         </div>
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-          <button className="btn btn--secondary" onClick={() => setModalOpen(false)} disabled={saving}>Cancel</button>
+          <button className="btn btn--secondary" onClick={closeModal} disabled={saving}>Cancel</button>
           <button className="btn btn--primary" onClick={handleSave} disabled={saving}>
             {saving ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Saving…</> : editTarget ? 'Save Changes' : 'Create Staff'}
           </button>
