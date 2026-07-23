@@ -106,11 +106,21 @@ exports.updateSlotStatus = async (req, res) => {
 // ─── ADMIN ROUTES ─────────────────────────────────────────────────────────────
 
 // POST /api/floors — create a new floor
+const MAX_ROWS = 26; // A-Z row labels
+const MAX_SLOTS_PER_ROW = 50;
+
 exports.createFloor = async (req, res) => {
   const { name, level, rows, slotsPerRow, displayOrder } = req.body;
 
   if (!name || level === undefined || !rows || !slotsPerRow) {
     return res.status(400).json({ message: 'name, level, rows, and slotsPerRow are required.' });
+  }
+
+  if (!Number.isInteger(rows) || rows < 1 || rows > MAX_ROWS) {
+    return res.status(400).json({ message: `rows must be a whole number between 1 and ${MAX_ROWS}.` });
+  }
+  if (!Number.isInteger(slotsPerRow) || slotsPerRow < 1 || slotsPerRow > MAX_SLOTS_PER_ROW) {
+    return res.status(400).json({ message: `slotsPerRow must be a whole number between 1 and ${MAX_SLOTS_PER_ROW}.` });
   }
 
   // Generate slots automatically

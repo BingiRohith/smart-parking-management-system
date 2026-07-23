@@ -18,7 +18,7 @@
 | 6 | 🟡 Medium | Validation/Runtime | `server/controllers/authController.js:39` | Login username isn't lowercased before query, but stored usernames are forced lowercase | ✅ FIXED |
 | 7 | 🟡 Medium | Security | `server/controllers/floorController.js:26` | Public unauthenticated endpoint leaks staff names via `populate` | ⏳ PENDING |
 | 8 | 🟡 Medium | Database | `server/controllers/floorController.js:38-91` | Read-modify-write on `Floor.save()` risks lost updates under concurrent slot edits | ✅ FIXED |
-| 9 | 🟡 Medium | Validation | `server/controllers/floorController.js:96-127` | No bounds/type check on `rows`/`slotsPerRow` | ⏳ PENDING |
+| 9 | 🟡 Medium | Validation | `server/controllers/floorController.js:96-127` | No bounds/type check on `rows`/`slotsPerRow` | ✅ FIXED |
 | 10 | 🟡 Medium | Security | `server/controllers/authController.js:28` | JWT unnecessarily duplicated into the response body | ⏳ PENDING |
 | 11 | 🟡 Medium | Async Bug | `client/src/hooks/useFloor.js:14-26` | No guard against out-of-order responses when `floorId` changes quickly | ⏳ PENDING |
 | 12 | 🟡 Medium | Unhandled Exception | `server/index.js` (whole file) | No `process.on('unhandledRejection'/'uncaughtException')` safety net | ⏳ PENDING |
@@ -130,7 +130,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 
 ### D3 — No upper bound enforced anywhere on embedded array growth
 - **Severity:** 🟡 Medium — see **Validation #V1** for full detail (same root cause: `createFloor` has no bounds check on `rows × slotsPerRow`, and MongoDB documents have a hard 16MB limit).
-- **Status:** ⏳ PENDING
+- **Status:** ✅ FIXED — see V1 above.
 
 ---
 
@@ -220,7 +220,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** The only check is presence (`if (!name || level === undefined || !rows || !slotsPerRow)`). There's no check that `rows`/`slotsPerRow` are positive integers, nor any upper bound. The frontend ([AdminFloors.jsx:223](client/src/pages/admin/AdminFloors.jsx)) only sets an HTML `max="26"` attribute on the input, which is a UI hint, not an enforced constraint — a manually-crafted request (or a user editing the DOM/using devtools) can submit arbitrary values.
 - **Impact:** A negative or zero value silently produces a floor with 0 slots (confusing, no error). A very large value (e.g., `rows: 10000, slotsPerRow: 10000`) would attempt to build a 100-million-element embedded array in a single document — likely to exceed MongoDB's 16MB per-document limit and throw an unhandled/unclear error, or in less extreme cases produce a legitimately huge, slow-to-load document.
 - **Best fix:** Validate `rows`/`slotsPerRow` are positive integers within a sane range (e.g., 1–26 rows, 1–50 slots/row) server-side, returning a clear `400` otherwise.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Added `Number.isInteger` + range checks (1–26 rows, 1–50 slots/row) right after the existing presence check, returning a clear `400` message. Verified against a live server with 8 cases: valid creation, zero rows, negative rows, rows > 26, slotsPerRow > 50, non-integer rows, the exact 10000×10000 DoS scenario called out above (now rejected instead of attempting a 100-million-slot document), and the new upper boundary (26×50) still succeeding — all passed as expected.
 
 ### V2 — Login username casing mismatch
 - **Severity:** 🟡 Medium
