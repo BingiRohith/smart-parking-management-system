@@ -14,7 +14,7 @@
 | 2 | 🟠 High | Missing Dependency | `server/package.json:8` | `npm run dev` calls `nodemon`, which is never declared as a dependency | ✅ FIXED |
 | 3 | 🟠 High | Async Bug/Production | `server/index.js:34,71` | Server starts accepting requests before `connectDB()` resolves | ✅ FIXED |
 | 4 | 🟠 High | Security | `server/controllers/authController.js:10-18` | `sameSite: 'strict'` cookie will silently break auth on cross-domain production deploys | ⏳ PENDING |
-| 5 | 🟠 High | Security | `server/routes/auth.js`, whole API | No rate limiting anywhere — login is brute-forceable | ⏳ PENDING |
+| 5 | 🟠 High | Security | `server/routes/auth.js`, whole API | No rate limiting anywhere — login is brute-forceable | ✅ FIXED |
 | 6 | 🟡 Medium | Validation/Runtime | `server/controllers/authController.js:39` | Login username isn't lowercased before query, but stored usernames are forced lowercase | ✅ FIXED |
 | 7 | 🟡 Medium | Security | `server/controllers/floorController.js:26` | Public unauthenticated endpoint leaks staff names via `populate` | ⏳ PENDING |
 | 8 | 🟡 Medium | Database | `server/controllers/floorController.js:38-91` | Read-modify-write on `Floor.save()` risks lost updates under concurrent slot edits | ✅ FIXED |
@@ -174,7 +174,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `authController.login` has no attempt counter, lockout, or delay of any kind — an attacker can submit unlimited username/password combinations as fast as the network allows.
 - **Impact:** Combined with the weak password policy (S7), this makes both targeted credential-guessing (e.g., against `admin`) and broad credential-stuffing fully unmitigated.
 - **Best fix:** Add `express-rate-limit` (or similar) scoped at minimum to `/api/auth/login`, ideally with progressive backoff per IP/username.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Added `express-rate-limit`, scoped to `POST /api/auth/login` only (10 attempts / 15 minutes per IP, standard `RateLimit-*` headers). Verified against a live server: 10 failed attempts return `401`, the 11th+ return `429` — and a *correct* password is also blocked once the limit is exhausted (confirming the limiter isn't accidentally scoped to failures only), while the unrelated public `/api/floors` endpoint remains unaffected.
 
 ### S6 — Public unauthenticated endpoint discloses staff names
 - **Severity:** 🟡 Medium
@@ -386,7 +386,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 
 ### PR3 — No rate limiting
 - **Severity:** 🟠 High — see **Security #S5** above.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ FIXED — see S5 above.
 
 ### PR4 — No graceful shutdown handling
 - **Severity:** 🟢 Low
