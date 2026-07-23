@@ -1,4 +1,5 @@
 const Floor = require('../models/Floor');
+const { generateSlots } = require('../utils/slots');
 
 // ─── PUBLIC ROUTES (no auth) ──────────────────────────────────────────────────
 
@@ -127,21 +128,7 @@ exports.createFloor = async (req, res) => {
     return res.status(400).json({ message: `slotsPerRow must be a whole number between 1 and ${MAX_SLOTS_PER_ROW}.` });
   }
 
-  // Generate slots automatically
-  const slots = [];
-  const rowLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-  for (let r = 0; r < rows; r++) {
-    const rowLabel = rowLetters[r] || `R${r + 1}`;
-    for (let p = 1; p <= slotsPerRow; p++) {
-      slots.push({
-        slotNumber: `${rowLabel}${p}`,
-        row: rowLabel,
-        position: p,
-        status: 'available',
-      });
-    }
-  }
+  const slots = generateSlots(rows, slotsPerRow);
 
   const floor = await Floor.create({
     name,

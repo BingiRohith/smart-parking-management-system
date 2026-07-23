@@ -25,7 +25,7 @@
 | 13 | 🟡 Medium | Unhandled Exception | `server/middleware/errorHandler.js:6-10` | Assumes `err.keyValue` always exists; would itself throw if not | ⏳ PENDING |
 | 14 | 🟢 Low | Memory/Resource Leak | `client/src/services/socket.js` | Shared socket is connected lazily but never explicitly disconnected | ⏳ PENDING |
 | 15 | 🟢 Low | Dead Code | `server/utils/seed.js:2` | `mongoose` imported, never used | ✅ FIXED |
-| 16 | 🟢 Low | Duplicate Code | `server/utils/seed.js:7-22` vs `server/controllers/floorController.js:104-117` | Slot-generation logic duplicated and drifted | ⏳ PENDING |
+| 16 | 🟢 Low | Duplicate Code | `server/utils/seed.js:7-22` vs `server/controllers/floorController.js:104-117` | Slot-generation logic duplicated and drifted | ✅ FIXED |
 | 17 | 🟢 Low | Duplicate Code | `client/src/pages/admin/AdminFloors.jsx` vs `AdminStaff.jsx` | Near-identical CRUD scaffolding, ~250 lines each | ⏳ PENDING |
 | 18 | 🟢 Low | Performance | `server/controllers/statsController.js:6-30`, `floorController.js:7-9` | Full slot arrays loaded into memory just to count statuses | ⏳ PENDING |
 | 19 | 🟢 Low | Performance | `server/controllers/authController.js:56-58` | `getMe` re-queries a user already loaded by `protect` | ⏳ PENDING |
@@ -312,7 +312,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** Both implement the same "rows × slotsPerRow → array of `{slotNumber, row, position, status}`" logic independently, and they have already drifted: `floorController.createFloor` includes a fallback for rows beyond 26 (`rowLetters[r] || \`R${r + 1}\``), while `seed.js`'s version does not (`const rowLabel = rowLetters[r];`, no fallback — would silently produce `slotNumber: "undefined1"` etc. if ever called with >26 rows).
 - **Impact:** Currently harmless since `seed.js` only ever requests 4-5 rows, but it's a textbook example of copy-paste duplication already causing behavioral drift — the next person to touch either copy is likely to fix only one of them, reintroducing an inconsistency.
 - **Best fix:** Extract a single shared `generateSlots(rows, slotsPerRow)` utility (e.g., in a new `server/utils/slots.js`) and have both `seed.js` and `floorController.js` import it.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Extracted `generateSlots(rows, slotsPerRow)` to `server/utils/slots.js` (using the more correct version with the >26-row fallback), and updated both `seed.js` and `floorController.createFloor` to import it — the drift between the two copies is now structurally impossible. Verified against a live server that seeded totals (30/35/24) and `createFloor`'s full bounds-validation test suite (8 cases, including the >26-row boundary) all still behave identically after the refactor.
 
 ### DUP2 — Near-identical CRUD scaffolding across two admin pages
 - **Severity:** 🟢 Low

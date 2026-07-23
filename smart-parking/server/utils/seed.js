@@ -2,23 +2,7 @@ require('dotenv').config();
 const connectDB = require('../config/db');
 const User = require('../models/User');
 const Floor = require('../models/Floor');
-
-const generateSlots = (rows, slotsPerRow) => {
-  const slots = [];
-  const rowLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  for (let r = 0; r < rows; r++) {
-    const rowLabel = rowLetters[r];
-    for (let p = 1; p <= slotsPerRow; p++) {
-      slots.push({
-        slotNumber: `${rowLabel}${p}`,
-        row: rowLabel,
-        position: p,
-        status: 'available',
-      });
-    }
-  }
-  return slots;
-};
+const { generateSlots } = require('./slots');
 
 const seed = async () => {
   await connectDB();
