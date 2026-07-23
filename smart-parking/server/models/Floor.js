@@ -46,11 +46,6 @@ const floorSchema = new mongoose.Schema(
       unique: true,
       // 0 = Ground, -1, -2, 1, 2 etc.
     },
-    totalSlots: {
-      type: Number,
-      required: true,
-      default: 0,
-    },
     slots: [slotSchema],
     isActive: {
       type: Boolean,
@@ -80,9 +75,12 @@ floorSchema.virtual('occupiedCount').get(function () {
   return slots.filter((s) => s.status === 'occupied').length;
 });
 
-// Keep totalSlots in sync when slots array changes
-floorSchema.pre('save', function () {
-  this.totalSlots = (this.slots || []).length;
+// totalSlots is derived from slots.length rather than a separately stored
+// field kept in sync by a pre('save') hook -- that hook never ran for
+// writes that bypass document middleware (e.g. insertMany, findOneAndUpdate),
+// so a stored counter could silently drift from the real slot count.
+floorSchema.virtual('totalSlots').get(function () {
+  return (this.slots || []).length;
 });
 
 module.exports = mongoose.model('Floor', floorSchema);

@@ -4,8 +4,10 @@ const Floor = require('../models/Floor');
 
 // GET /api/floors — summary of all active floors
 exports.getAllFloors = async (req, res) => {
+  // totalSlots is a virtual derived from slots, so slots must stay selected
+  // even though only the count is returned in the summary below.
   const floors = await Floor.find({ isActive: true })
-    .select('name level totalSlots slots displayOrder')
+    .select('name level slots displayOrder')
     .sort({ displayOrder: 1, level: -1 });
 
   const summary = floors.map((floor) => ({
