@@ -280,7 +280,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** Every socket connect, `join_floor`, `leave_floor`, and disconnect is unconditionally logged via `console.log`, with no way to turn it off or route it through a real logger.
 - **Impact:** Harmless at demo traffic; under real concurrent usage (many drivers opening the homepage, each opening a socket connection) this floods stdout, making production logs hard to search and potentially adding I/O overhead under load.
 - **Best fix:** Route through a logging library (e.g., `pino`/`winston`) with a configurable level, and drop to `debug` level or remove entirely for connect/disconnect noise.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED, without adding a new logging dependency.** Wrapped the four `console.log` calls in a `debugLog` helper gated on `NODE_ENV !== 'production'` — kept the fix scoped to what was actually asked for (stop flooding *production* logs) rather than introducing a new logging library dependency. Verified with a real client+server connection: with `NODE_ENV=development`, connect/join logs still appear exactly as before; with `NODE_ENV=production`, the exact same connection sequence produces no socket logs at all.
 
 ---
 
@@ -412,7 +412,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 
 ### PR6 — Console-only logging, no structured/leveled logger
 - **Severity:** 🟢 Low — see **Performance #P4** above; same root cause, production-monitoring angle.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ FIXED — see P4 above.
 
 ### PR7 — External Google Fonts dependency with no fallback
 - **Severity:** 🟢 Low
