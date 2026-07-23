@@ -15,7 +15,7 @@
 | 3 | 🟠 High | Async Bug/Production | `server/index.js:34,71` | Server starts accepting requests before `connectDB()` resolves | ✅ FIXED |
 | 4 | 🟠 High | Security | `server/controllers/authController.js:10-18` | `sameSite: 'strict'` cookie will silently break auth on cross-domain production deploys | ⏳ PENDING |
 | 5 | 🟠 High | Security | `server/routes/auth.js`, whole API | No rate limiting anywhere — login is brute-forceable | ⏳ PENDING |
-| 6 | 🟡 Medium | Validation/Runtime | `server/controllers/authController.js:39` | Login username isn't lowercased before query, but stored usernames are forced lowercase | ⏳ PENDING |
+| 6 | 🟡 Medium | Validation/Runtime | `server/controllers/authController.js:39` | Login username isn't lowercased before query, but stored usernames are forced lowercase | ✅ FIXED |
 | 7 | 🟡 Medium | Security | `server/controllers/floorController.js:26` | Public unauthenticated endpoint leaks staff names via `populate` | ⏳ PENDING |
 | 8 | 🟡 Medium | Database | `server/controllers/floorController.js:38-91` | Read-modify-write on `Floor.save()` risks lost updates under concurrent slot edits | ⏳ PENDING |
 | 9 | 🟡 Medium | Validation | `server/controllers/floorController.js:96-127` | No bounds/type check on `rows`/`slotsPerRow` | ⏳ PENDING |
@@ -228,7 +228,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `User.username` has `lowercase: true`, so every stored username is lowercase regardless of how it was entered at creation (and the admin UI in [AdminStaff.jsx:76](client/src/pages/admin/AdminStaff.jsx) also lowercases client-side before creating). But `login`'s query — `User.findOne({ username, isActive: true })` — uses the raw, un-normalized `req.body.username` directly. MongoDB string equality is case-sensitive by default.
 - **Impact:** A legitimate user who types `Admin` instead of `admin` at the login screen gets a generic "Invalid username or password" error, even with the exact correct password — a real, reproducible login failure for a plausible everyday input (capitalizing a name, autocapitalize on mobile keyboards, etc.).
 - **Best fix:** Lowercase/trim `username` in `login` before the query: `User.findOne({ username: username.toLowerCase().trim(), isActive: true })`.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** `login` now normalizes (`.trim().toLowerCase()`) the incoming username before querying. Verified against a real seeded database: logging in as `admin`, `Admin`, and `  ADMIN  ` (padded + uppercase) all now succeed identically, while a wrong password still correctly returns 401.
 
 ### V3 — No username format constraints
 - **Severity:** 🟢 Low

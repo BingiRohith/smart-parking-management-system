@@ -36,7 +36,8 @@ exports.login = async (req, res) => {
     return res.status(400).json({ message: 'Username and password are required.' });
   }
 
-  const user = await User.findOne({ username, isActive: true }).select('+password').populate('assignedFloor', 'name level');
+  const normalizedUsername = username.trim().toLowerCase();
+  const user = await User.findOne({ username: normalizedUsername, isActive: true }).select('+password').populate('assignedFloor', 'name level');
 
   if (!user || !(await user.comparePassword(password))) {
     return res.status(401).json({ message: 'Invalid username or password.' });
