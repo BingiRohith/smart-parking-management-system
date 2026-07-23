@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
 import socket from '../services/socket';
 
@@ -10,18 +10,28 @@ export const useFloor = (floorId) => {
   const [floor, setFloor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Guards against out-of-order responses: if floorId changes quickly (or
+  // refetch() is called again) before an in-flight request resolves, a
+  // later request bumps this counter, and the earlier request's result is
+  // discarded on arrival instead of overwriting newer state.
+  const requestIdRef = useRef(0);
 
   const fetchFloor = useCallback(async () => {
     if (!floorId) return;
+    const requestId = ++requestIdRef.current;
     try {
       setLoading(true);
       setError(null);
       const { data } = await api.get(`/floors/${floorId}`);
+      if (requestIdRef.current !== requestId) return;
       setFloor(data.floor);
     } catch (err) {
+      if (requestIdRef.current !== requestId) return;
       setError(err.response?.data?.message || 'Failed to load floor data.');
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) {
+        setLoading(false);
+      }
     }
   }, [floorId]);
 

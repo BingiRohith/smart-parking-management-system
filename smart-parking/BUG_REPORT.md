@@ -20,7 +20,7 @@
 | 8 | 🟡 Medium | Database | `server/controllers/floorController.js:38-91` | Read-modify-write on `Floor.save()` risks lost updates under concurrent slot edits | ✅ FIXED |
 | 9 | 🟡 Medium | Validation | `server/controllers/floorController.js:96-127` | No bounds/type check on `rows`/`slotsPerRow` | ✅ FIXED |
 | 10 | 🟡 Medium | Security | `server/controllers/authController.js:28` | JWT unnecessarily duplicated into the response body | ✅ FIXED |
-| 11 | 🟡 Medium | Async Bug | `client/src/hooks/useFloor.js:14-26` | No guard against out-of-order responses when `floorId` changes quickly | ⏳ PENDING |
+| 11 | 🟡 Medium | Async Bug | `client/src/hooks/useFloor.js:14-26` | No guard against out-of-order responses when `floorId` changes quickly | ✅ FIXED |
 | 12 | 🟡 Medium | Unhandled Exception | `server/index.js` (whole file) | No `process.on('unhandledRejection'/'uncaughtException')` safety net | ⏳ PENDING |
 | 13 | 🟡 Medium | Unhandled Exception | `server/middleware/errorHandler.js:6-10` | Assumes `err.keyValue` always exists; would itself throw if not | ⏳ PENDING |
 | 14 | 🟢 Low | Memory/Resource Leak | `client/src/services/socket.js` | Shared socket is connected lazily but never explicitly disconnected | ⏳ PENDING |
@@ -368,7 +368,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** `fetchFloor` is a `useCallback` keyed on `floorId`; the effect at line 28-30 re-invokes it whenever `floorId` changes (e.g., rapid client-side navigation between `/floor/A` and `/floor/B`). There is no cancellation token, `AbortController`, or "is this still the current floorId" guard before calling `setFloor(data.floor)` at line 20. If the request for floor A is still in flight when the user navigates to floor B (which starts a new, faster-resolving request), and A's response arrives *after* B's, `setFloor` will overwrite the correct floor-B data with stale floor-A data — while the URL and rest of the UI (breadcrumb, title) still say "floor B."
 - **Impact:** A real, if narrow-window, data-correctness bug: the displayed slot grid can silently belong to the wrong floor for a moment (or indefinitely, until the next socket event or manual refetch nudges it back). More likely to manifest on slow/flaky networks where response ordering is less predictable.
 - **Best fix:** Guard the `setFloor` call with a check that the response still corresponds to the current `floorId` (e.g., capture `floorId` in a ref, or use an `AbortController` per request and ignore aborted results), following the same pattern React's own docs recommend for this exact race.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Added a monotonically-incrementing `requestIdRef`: each call to `fetchFloor` (whether from the effect on `floorId` change, or a manual `refetch()`) captures its own id, and the response handler discards the result if a newer call has since started (`requestIdRef.current !== requestId`). Verified two ways: (1) a direct simulation reproducing the exact race — floor A requested first but resolving slower (200ms) than floor B requested second (20ms) — confirmed the stale A response is discarded and final state correctly reflects floor B; (2) a real-browser regression check confirmed the normal single-navigation case (view Ground Floor's 30 slots) still renders correctly with no change in behavior.
 
 ### AB3 — Check-then-act race on username uniqueness
 - **Severity:** 🟢 Low
