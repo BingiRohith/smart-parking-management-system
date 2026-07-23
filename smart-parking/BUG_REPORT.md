@@ -19,7 +19,7 @@
 | 7 | 🟡 Medium | Security | `server/controllers/floorController.js:26` | Public unauthenticated endpoint leaks staff names via `populate` | ⏳ PENDING |
 | 8 | 🟡 Medium | Database | `server/controllers/floorController.js:38-91` | Read-modify-write on `Floor.save()` risks lost updates under concurrent slot edits | ✅ FIXED |
 | 9 | 🟡 Medium | Validation | `server/controllers/floorController.js:96-127` | No bounds/type check on `rows`/`slotsPerRow` | ✅ FIXED |
-| 10 | 🟡 Medium | Security | `server/controllers/authController.js:28` | JWT unnecessarily duplicated into the response body | ⏳ PENDING |
+| 10 | 🟡 Medium | Security | `server/controllers/authController.js:28` | JWT unnecessarily duplicated into the response body | ✅ FIXED |
 | 11 | 🟡 Medium | Async Bug | `client/src/hooks/useFloor.js:14-26` | No guard against out-of-order responses when `floorId` changes quickly | ⏳ PENDING |
 | 12 | 🟡 Medium | Unhandled Exception | `server/index.js` (whole file) | No `process.on('unhandledRejection'/'uncaughtException')` safety net | ⏳ PENDING |
 | 13 | 🟡 Medium | Unhandled Exception | `server/middleware/errorHandler.js:6-10` | Assumes `err.keyValue` always exists; would itself throw if not | ⏳ PENDING |
@@ -198,7 +198,7 @@ The one build-adjacent failure found is a missing-dependency issue in the dev sc
 - **Why it's a bug:** The code comment says this is "for mobile clients," but nothing in this codebase (the React SPA exclusively uses the httpOnly cookie) actually consumes the body token. Sending a sensitive bearer credential in a JSON response body — which is far more likely to be logged (browser devtools, proxies, API gateways, error-tracking tools that capture response payloads) than an httpOnly cookie — is an unnecessary widening of the token's exposure surface for a use case that doesn't exist yet.
 - **Impact:** Increases the chance of the JWT leaking via logs/monitoring tooling for no current functional benefit.
 - **Best fix:** Remove the body token until/unless a real non-cookie client (mobile app, etc.) actually needs it; add it back deliberately at that point with appropriate log-scrubbing safeguards.
-- **Status:** ⏳ PENDING
+- **Status:** ✅ **FIXED.** Confirmed (via grep) that no client code reads the response body's `token` field. Removed it from `sendTokenResponse`'s JSON payload — the httpOnly cookie remains the sole auth mechanism. Verified against a live server: login response body now contains only `{message, user}`, the `Set-Cookie` header is still present, and a subsequent `/api/auth/me` call using that cookie still succeeds.
 
 ### S9 — Known low-severity advisory in a transitive dependency
 - **Severity:** 🟢 Low

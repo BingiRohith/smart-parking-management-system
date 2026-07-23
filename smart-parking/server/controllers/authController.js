@@ -25,7 +25,6 @@ const sendTokenResponse = (user, statusCode, res) => {
   res.status(statusCode).json({
     message: 'Login successful',
     user,
-    token, // Also send token in body for mobile clients
   });
 };
 
